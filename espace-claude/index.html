@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Espace Claude — Simulateur &amp; Home Assistant</title>
+<title>Espace Claude — Simulateur, Logiciel &amp; Home Assistant</title>
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--txt:#1b2333;--mut:#5a6479;--bd:#d9dfeb;--a:#2f6fdc;--b:#18a0a0}
 @media(prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347}}
@@ -14,7 +14,9 @@ h1{margin:0 0 4px;font-size:1.7rem}header p{margin:0;color:var(--mut)}
 nav{max-width:1000px;margin:14px auto 0;padding:0 20px;display:flex;gap:8px}
 nav button{font:inherit;font-weight:700;padding:10px 18px;border-radius:999px;border:2px solid var(--c);background:transparent;color:var(--c);cursor:pointer}
 nav button.on{background:var(--c);color:#fff}
-#t-sim{--c:var(--a)}#t-ha{--c:var(--b)}
+#t-sim{--c:var(--a)}#t-ha{--c:var(--b)}#t-log{--c:#7c3aed}
+.card.dl{border-left-color:#7c3aed}
+.steps li{margin:4px 0}
 main{max-width:1000px;margin:14px auto 40px;padding:0 20px}
 section[hidden]{display:none}
 h2{margin:18px 0 8px}
@@ -35,6 +37,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
 <header><h1>Espace Claude</h1><p>Travaux réalisés avec Claude : informatique et réseaux (bac pro CIEL), domotique Home Assistant.</p></header>
 <nav role="tablist">
   <button id="t-sim" class="on" role="tab">🖥️ Simulateur</button>
+  <button id="t-log" role="tab">💾 Logiciel</button>
   <button id="t-ha" role="tab">🏠 Home Assistant</button>
 </nav>
 <main>
@@ -58,6 +61,21 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
     <a class="card" href="simulateur/calculatrice-ipv4.html"><b>Calculatrice IPv4</b><span>Réseau, masque, diffusion, plage d’hôtes.</span></a>
     <a class="card" href="simulateur/calculateur-energie.html"><b>Calculateur d’énergie</b><span>Puissance, consommation et coût.</span></a>
   </div>
+</section>
+<section id="p-log" hidden>
+  <h2>Logiciels Windows</h2>
+  <div class="grid">
+    <a class="card dl" href="logiciel/SimReseau-final.exe" download><b>SimRéseau — simulateur réseau (Windows)</b><span>SimReseau-final.exe · 8 Mo · Windows 10/11 64 bits · sans installation</span></a>
+  </div>
+  <h2>SimRéseau</h2>
+  <p>Réécriture du « Simulateur réseau » v2 de Pierre Loisel (Réseau CERTA), sans le bug de Windows 11 qui posait plusieurs PC ou switchs à la fois. Quatre modes : Conception, Ethernet (hub, switch, collisions CSMA/CD, VLAN, spanning tree), IP (ARP, routage, ping, Internet) et Transport (ports TCP/UDP, NAT/PAT, filtrage).</p>
+  <ol class="steps">
+    <li>Cliquer sur la carte ci-dessus pour télécharger <code>SimReseau-final.exe</code>.</li>
+    <li>Double-cliquer sur le fichier : aucune installation, aucun framework .NET nécessaire.</li>
+    <li>Si Windows affiche « Windows a protégé votre ordinateur » : « Informations complémentaires » puis « Exécuter quand même » (le programme n’est pas signé).</li>
+    <li>Menu Fichier › Exemples pour démarrer, ou Fichier › Ouvrir pour reprendre un réseau <code>.xml</code> de l’ancien simulateur CERTA.</li>
+  </ol>
+  <p class="note">Sur GitHub, le fichier se télécharge aussi depuis le dossier <code>espace-claude/logiciel/</code> (bouton « Download raw file »).</p>
 </section>
 <section id="p-ha" hidden>
   <div class="guide" id="ha-guide">
@@ -95,9 +113,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
 </section>
 </main>
 <script>
-const s=document.getElementById('t-sim'),h=document.getElementById('t-ha'),ps=document.getElementById('p-sim'),ph=document.getElementById('p-ha');
-function go(ha){ps.hidden=ha;ph.hidden=!ha;s.classList.toggle('on',!ha);h.classList.toggle('on',ha);try{history.replaceState(null,'',ha?'#home-assistant':'#simulateur')}catch(e){}}
-s.onclick=()=>go(false);h.onclick=()=>go(true);go(location.hash==='#home-assistant');
+const tabs={simulateur:['t-sim','p-sim'],logiciel:['t-log','p-log'],'home-assistant':['t-ha','p-ha']};
+function go(k){for(const [n,[t,p]] of Object.entries(tabs)){document.getElementById(p).hidden=n!==k;document.getElementById(t).classList.toggle('on',n===k);}try{history.replaceState(null,'','#'+k)}catch(e){}}
+for(const [n,[t]] of Object.entries(tabs))document.getElementById(t).onclick=()=>go(n);
+go(tabs[location.hash.slice(1)]?location.hash.slice(1):'simulateur');
 </script>
 </body>
 </html>
