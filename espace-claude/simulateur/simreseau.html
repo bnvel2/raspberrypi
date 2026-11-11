@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimRéseau — Simulateur réseau pédagogique</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273549; --line:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent2:#22c55e;
+    --danger:#ef4444; --warn:#f59e0b; --pc:#38bdf8; --server:#a78bfa;
+    --switch:#22c55e; --router:#f59e0b; --hub:#64748b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .dim{color:#64748b}
+  header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.3px}
+  header h1 small{color:var(--muted);font-weight:500}
+  .modes{display:flex;background:var(--panel2);border-radius:10px;padding:3px}
+  .modes button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
+  .modes button.active{background:var(--accent);color:#06243a}
+  .tools{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .tools button{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 11px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .tools button:hover{border-color:var(--accent)}
+  .tools button.on{background:var(--accent);color:#06243a;border-color:var(--accent)}
+  main{display:flex;height:calc(100% - 53px)}
+  #palette{width:120px;background:var(--panel);border-right:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .palette-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:2px 0}
+  .pal{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;cursor:pointer;user-select:none}
+  .pal:hover{border-color:var(--accent)}
+  .pal.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .pal .ico{font-size:22px;line-height:1}
+  .pal .nm{font-size:11px;font-weight:600}
+  .hint{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:4px}
+  #stage{flex:1;position:relative;overflow:hidden;background:
+     radial-gradient(circle at 1px 1px, #1b2740 1px, transparent 0) 0 0/22px 22px, var(--bg)}
+  #stage.linking{cursor:crosshair}
+  svg#wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  text.iflbl{font-size:9px;fill:#cbd5e1;paint-order:stroke;stroke:#0b1424;stroke-width:3px;stroke-linejoin:round;font-weight:600;font-family:ui-monospace,monospace}
+  text.iflbl tspan.ipsub{fill:#7dd3fc}
+  .node{position:absolute;width:78px;transform:translate(-50%,-50%);text-align:center;cursor:grab;user-select:none}
+  .node .box{width:52px;height:52px;margin:0 auto;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--panel2);border:2px solid var(--line);position:relative}
+  .node[data-type=pc] .box{border-color:var(--pc)}
+  .node[data-type=server] .box{border-color:var(--server)}
+  .node[data-type=switch] .box{border-color:var(--switch)}
+  .node[data-type=router] .box{border-color:var(--router)}
+  .node[data-type=hub] .box{border-color:var(--hub)}
+  .node.sel .box{box-shadow:0 0 0 3px rgba(56,189,248,.5)}
+  .node .lbl{font-size:11px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .ip{font-size:9.5px;color:var(--muted);white-space:nowrap}
+  .node.ok .box{animation:pulse .7s ease}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.7)}100%{box-shadow:0 0 0 18px rgba(34,197,94,0)}}
+  .packet{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px var(--accent2);transform:translate(-50%,-50%);pointer-events:none;z-index:5}
+  #reopen{position:absolute;top:10px;right:10px;z-index:8;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 11px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600;display:none}
+  #modeBadge{position:absolute;top:10px;left:10px;z-index:8;border-radius:22px;padding:8px 15px;font-weight:700;font-size:12.5px;cursor:pointer;border:1px solid var(--line);user-select:none;display:flex;align-items:center;gap:9px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  #modeBadge .swap{opacity:.75;font-weight:600;font-size:11px;border-left:1px solid currentColor;padding-left:9px}
+  #modeBadge.design{background:#0b2a3a;color:#7dd3fc;border-color:#155e75}
+  #modeBadge.sim{background:#06281a;color:#5eead4;border-color:#14532d}
+  .modes .mlabel{color:var(--muted);font-size:11px;font-weight:600;padding:0 4px}
+  .modes button:not(.active){opacity:.75}
+  #doc{position:absolute;inset:0;z-index:12;background:var(--bg);overflow:auto;display:none}
+  #doc .wrap{max-width:840px;margin:0 auto;padding:24px 30px 70px}
+  #doc h2{font-size:22px;margin:0 0 2px}
+  #doc .sub{color:var(--muted);margin:0 0 20px}
+  #doc h3{font-size:15px;margin:28px 0 8px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+  #doc p{line-height:1.65;color:#cbd5e1;margin:8px 0}
+  #doc ul{line-height:1.65;color:#cbd5e1;padding-left:20px;margin:8px 0}
+  #doc li{margin:5px 0}
+  #doc code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:ui-monospace,monospace;font-size:12.5px;color:#7dd3fc}
+  #doc table{width:100%;border-collapse:collapse;margin:10px 0}
+  #doc th,#doc td{border:1px solid var(--line);padding:6px 10px;text-align:left;font-size:13px;vertical-align:top}
+  #doc th{background:var(--panel2);color:var(--muted)}
+  #doc .docclose{position:sticky;top:14px;float:right;margin-left:12px}
+  #doc .lead{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:#cbd5e1;line-height:1.6}
+  #side{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  #side .head{padding:11px 14px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .xbtn{border:1px solid var(--line);background:var(--panel2);color:var(--muted);width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:13px;line-height:1;flex:0 0 auto}
+  .xbtn:hover{color:var(--text);border-color:var(--danger)}
+  #side .body{padding:14px;overflow:auto;flex:1}
+  .empty{color:var(--muted);font-size:12.5px;line-height:1.6}
+  label.f{display:block;font-size:11.5px;color:var(--muted);margin:12px 0 4px;font-weight:600}
+  input.f,select.f{width:100%;padding:7px 9px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit}
+  input.f:disabled{opacity:.45}
+  input.f:focus,select.f:focus{outline:none;border-color:var(--accent)}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#06243a;border-color:var(--accent)}
+  .btn.danger{background:transparent;color:var(--danger);border-color:var(--danger)}
+  .btn:hover{filter:brightness(1.08)}
+  .if{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px;margin-bottom:8px}
+  .if .t{font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:4px;display:flex;justify-content:space-between}
+  .if .t .st{font-weight:600}
+  .st.up{color:var(--accent2)} .st.down{color:var(--muted)}
+  .sec{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin:16px 0 6px;border-top:1px solid var(--line);padding-top:12px}
+  .mono{font-family:ui-monospace,monospace;font-size:11.5px}
+  table.mono td,table.mono th{padding:3px 6px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  .tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:#0b2a3a;color:#7dd3fc;border:1px solid #155e75}
+  #term{display:flex;flex-direction:column;height:calc(100vh - 160px)}
+  #termOut{flex:1;overflow:auto;padding:12px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12.5px;line-height:1.55;white-space:pre-wrap;background:#0a1120}
+  #termOut .ok{color:#4ade80}.cmd{color:#38bdf8}.err{color:#f87171}
+  #termIn{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:#0a1120}
+  #termIn span{color:#4ade80;font-family:ui-monospace,monospace;font-size:12.5px}
+  #termIn input{flex:1;background:transparent;border:0;color:var(--text);font-family:ui-monospace,monospace;font-size:12.5px;outline:none}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:9px 16px;border-radius:10px;font-size:13px;z-index:30;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .pill{font-size:10.5px;padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>🖧 SimRéseau <small>— simulateur réseau · bac pro CIEL</small></h1>
+  <div class="modes">
+    <span class="mlabel">Mode :</span>
+    <button id="mDesign" class="active" onclick="setMode('design')">✏️ Conception</button>
+    <button id="mSim" onclick="setMode('sim')">▶️ Simulation</button>
+  </div>
+  <div class="tools">
+    <button id="docBtn" onclick="toggleDoc()">📖 Aide</button>
+    <button id="linkBtn" onclick="toggleLink()">🔗 Relier</button>
+    <button onclick="loadExample()">📋 Exemple</button>
+    <button onclick="loadVlanExample()">🏷️ Exemple VLAN</button>
+    <button onclick="loadDhcpExample()">🧩 Exemple DHCP</button>
+    <button onclick="showCapture()">📡 Trames</button>
+    <button onclick="exportImage()">🖼️ Image</button>
+    <button onclick="saveFile()">💾 Enregistrer</button>
+    <button onclick="openFile()">📂 Ouvrir</button>
+    <button onclick="toggleFull()">⛶ Plein écran</button>
+    <button onclick="clearAll()">🗑️ Effacer</button>
+  </div>
+</header>
+<main>
+  <div id="palette">
+    <div class="palette-title">Équipements</div>
+    <div class="pal" data-type="pc"     onclick="pickPal('pc',this)"><div class="ico">💻</div><div class="nm">PC</div></div>
+    <div class="pal" data-type="server" onclick="pickPal('server',this)"><div class="ico">🖥️</div><div class="nm">Serveur</div></div>
+    <div class="pal" data-type="switch" onclick="pickPal('switch',this)"><div class="ico">🔀</div><div class="nm">Switch</div></div>
+    <div class="pal" data-type="router" onclick="pickPal('router',this)"><div class="ico">🛰️</div><div class="nm">Routeur</div></div>
+    <div class="pal" data-type="hub"    onclick="pickPal('hub',this)"><div class="ico">⭐</div><div class="nm">Hub</div></div>
+    <div class="hint">En <b>Conception</b> : choisis un équipement puis clique la zone. Glisse pour déplacer. <b>Relier</b> : clique deux équipements.<br><br>En <b>Simulation</b> : clique un PC/serveur pour sa console (<b>ping</b>, <b>ipconfig</b>).</div>
+  </div>
+
+  <div id="stage">
+    <svg id="wires"></svg>
+    <div id="modeBadge" class="design" onclick="toggleMode()" title="Cliquer pour changer de mode"><span id="modeBadgeTxt">✏️ Mode Conception</span><span class="swap">↔ cliquer pour simuler</span></div>
+    <button id="reopen" onclick="openSide()">⚙️ Panneau</button>
+    <div id="doc"><div class="wrap">
+      <button class="btn primary docclose" onclick="toggleDoc()">✕ Fermer</button>
+      <h2>📖 Documentation — SimRéseau</h2>
+      <p class="sub">Tout ce que le simulateur sait faire, pour les TP réseau du bac pro CIEL.</p>
+      <p class="lead">SimRéseau fonctionne en deux temps. En <b>✏️ Conception</b> on construit et on configure le réseau ; en <b>▶️ Simulation</b> on le teste depuis la console des machines. Le travail est sauvegardé automatiquement dans le navigateur, et exportable en fichier.</p>
+
+      <h3>1. Construire la topologie</h3>
+      <ul>
+        <li><b>Ajouter</b> : en Conception, clique un équipement dans la palette de gauche, puis clique la zone pour le poser.</li>
+        <li><b>Déplacer</b> : glisse un équipement. Les liaisons suivent.</li>
+        <li><b>Relier</b> : clique le bouton <code>🔗 Relier</code>, puis les deux équipements. Le premier port libre de chacun est utilisé automatiquement.</li>
+        <li><b>Configurer</b> : clique un équipement → le panneau de droite affiche ses réglages.</li>
+        <li><b>Supprimer / débrancher</b> : boutons en bas du panneau (ou touche <code>Suppr</code> sur l'équipement sélectionné).</li>
+      </ul>
+
+      <h3>2. Les équipements</h3>
+      <table>
+        <tr><th>Équipement</th><th>Niveau</th><th>Rôle</th></tr>
+        <tr><td>💻 PC / 🖥️ Serveur</td><td>Hôte</td><td>Une carte réseau (IP, masque, passerelle, DNS). Le serveur peut en plus héberger DHCP, DNS et un site web.</td></tr>
+        <tr><td>🔀 Switch</td><td>2</td><td>Commutateur : relie les postes d'un même réseau, gère les VLAN (ports Accès / Trunk).</td></tr>
+        <tr><td>🛰️ Routeur</td><td>3</td><td>Relie des réseaux différents : routage, sous-interfaces VLAN (802.1Q), routes statiques, pare-feu, DHCP.</td></tr>
+        <tr><td>⭐ Hub</td><td>1</td><td>Concentrateur : répète le signal sur tous les ports, sans gestion de VLAN. Utile pour illustrer la différence avec un switch.</td></tr>
+      </table>
+
+      <h3>3. Adressage IP</h3>
+      <ul>
+        <li>Sur un PC/serveur : <b>Adresse IP</b>, <b>Masque</b>, <b>Passerelle</b> et <b>Serveur DNS</b>.</li>
+        <li>Le masque s'écrit en décimal (<code>255.255.255.0</code>) <b>ou</b> en notation CIDR (<code>/24</code>).</li>
+        <li>Deux machines communiquent directement si elles sont dans le <b>même sous-réseau</b> ; sinon il faut une passerelle (un routeur).</li>
+        <li>Adressage <b>automatique (DHCP)</b> : voir section 7.</li>
+      </ul>
+
+      <h3>4. VLAN (niveau 2)</h3>
+      <p>Sur un <b>switch</b>, chaque port relié se règle :</p>
+      <ul>
+        <li><b>Accès</b> + un numéro de VLAN : le poste branché appartient à ce VLAN.</li>
+        <li><b>Trunk</b> : le port transporte tous les VLAN (étiquetage 802.1Q). À utiliser entre deux switchs, ou vers un routeur.</li>
+      </ul>
+      <p>Deux postes ne se « voient » que s'ils sont dans le <b>même VLAN</b>. Pour faire communiquer deux VLAN, il faut un routeur (section 6).</p>
+
+      <h3>5. Routage</h3>
+      <ul>
+        <li><b>Réseaux directement connectés</b> : routés automatiquement entre les interfaces du routeur.</li>
+        <li><b>Routes statiques</b> : <code>réseau destination</code> + <code>masque</code> + <code>prochain saut</code> (IP du routeur voisin). Nécessaire dès qu'un réseau n'est pas directement connecté.</li>
+        <li><b>Multi-routeurs</b> : le moteur choisit la route au plus long préfixe et enchaîne de routeur en routeur ; une <code>0.0.0.0 /0</code> fait une route par défaut.</li>
+      </ul>
+
+      <h3>6. Routage inter-VLAN (router-on-a-stick)</h3>
+      <p>Sur une interface de routeur, choisis le type <b>Trunk 802.1Q</b> puis ajoute une <b>sous-interface</b> par VLAN (numéro de VLAN + IP = passerelle du VLAN + masque). Côté switch, le port vers le routeur doit être en <b>Trunk</b>. Un seul lien physique route alors tous les VLAN.</p>
+
+      <h3>7. DHCP</h3>
+      <ul>
+        <li><b>Service</b> (sur un routeur ou un serveur) : crée une <b>étendue</b> — réseau/masque, passerelle distribuée, plage d'adresses, et serveur DNS optionnel.</li>
+        <li><b>Client</b> (PC/serveur) : passe l'attribution sur <b>Automatique (DHCP)</b>. Le bail obtenu s'affiche, et <code>ipconfig</code> le détaille.</li>
+        <li>Un client n'obtient une adresse que si un serveur DHCP est joignable dans son VLAN/réseau — sinon il reste sans IP.</li>
+      </ul>
+
+      <h3>8. DNS & serveur web</h3>
+      <ul>
+        <li><b>Serveur DNS</b> (sur un serveur) : enregistrements <code>nom → IP</code> (ex. <code>www.lycee.fr → 192.168.1.200</code>).</li>
+        <li><b>Serveur web</b> (sur un serveur) : activer le port 80, définir un titre et un contenu de page.</li>
+        <li>Côté hôte, renseigne un <b>Serveur DNS</b> (ou laisse le DHCP le distribuer) pour utiliser les noms.</li>
+      </ul>
+
+      <h3>9. Console & commandes</h3>
+      <p>En <b>Simulation</b>, clique un PC/serveur pour ouvrir sa console. Les flèches <code>↑</code>/<code>↓</code> rappellent l'historique.</p>
+      <table>
+        <tr><th>Commande</th><th>Effet</th></tr>
+        <tr><td><code>ipconfig</code></td><td>Affiche IP, masque, passerelle, DNS et bail DHCP.</td></tr>
+        <tr><td><code>ping &lt;ip&gt;</code></td><td>Teste la connectivité (ARP, routage, pare-feu).</td></tr>
+        <tr><td><code>ping &lt;nom&gt;</code></td><td>Résout le nom par DNS puis teste la connectivité.</td></tr>
+        <tr><td><code>nslookup &lt;nom&gt;</code></td><td>Interroge le DNS et affiche l'adresse.</td></tr>
+        <tr><td><code>http &lt;nom|ip&gt;</code></td><td>Mini-navigateur : affiche la page du serveur web.</td></tr>
+        <tr><td><code>arp</code></td><td>Montre les machines joignables dans le même VLAN.</td></tr>
+        <tr><td><code>aide</code> · <code>effacer</code></td><td>Liste des commandes · vide la console.</td></tr>
+      </table>
+
+      <h3>10. Pare-feu</h3>
+      <p>Sur un routeur : une <b>politique par défaut</b> (autoriser, ou refuser = deny implicite façon ACL Cisco) et des <b>règles ordonnées</b> (action, protocole, source, destination, port). Elles sont évaluées de haut en bas à chaque routeur traversé, première correspondance appliquée. La console indique quand un paquet est bloqué.</p>
+
+      <h3>11. Capture de trames</h3>
+      <p>Bouton <code>📡 Trames</code> : après chaque ping / requête, la capture liste les trames échangées (DHCP, ARP, ICMP, DNS, HTTP) avec source, destination, protocole, VLAN et détail — pour visualiser ce qui circule, à la manière de Wireshark.</p>
+
+      <h3>12. Outils</h3>
+      <ul>
+        <li><code>⛶ Plein écran</code> : agrandit l'interface (Échap pour sortir).</li>
+        <li><code>✕</code> en haut du panneau : le referme pour agrandir le schéma ; <code>⚙️ Panneau</code> le rouvre.</li>
+        <li><code>💾 Enregistrer</code> / <code>📂 Ouvrir</code> : sauvegarde la topologie en fichier <code>.json</code> et la recharge.</li>
+        <li><code>🖼️ Image</code> : exporte le schéma en <b>PNG</b> (idéal pour tes énoncés de TP).</li>
+        <li><code>📋 Exemple</code>, <code>🏷️ Exemple VLAN</code>, <code>🧩 Exemple DHCP</code> : topologies prêtes à tester.</li>
+      </ul>
+
+      <h3>13. Pour démarrer vite</h3>
+      <p>Charge <code>🧩 Exemple DHCP</code>, passe en <b>Simulation</b>, clique <b>PC1</b> et tape successivement : <code>ipconfig</code>, <code>ping www.lycee.fr</code>, <code>http www.lycee.fr</code>. Ouvre <code>📡 Trames</code> pour voir toute la chaîne DHCP → DNS → HTTP.</p>
+      <button class="btn primary" style="margin-top:20px" onclick="toggleDoc()">✕ Fermer la documentation</button>
+    </div></div>
+  </div>
+
+  <div id="side">
+    <div class="head"><span id="sideHead">Propriétés</span><button class="xbtn" title="Fermer le panneau" onclick="closeSide()">✕</button></div>
+    <div class="body" id="sideBody">
+      <div class="empty">Sélectionne un équipement pour le configurer, ou pose-en un depuis la palette.</div>
+    </div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" accept=".json" style="display:none">
+
+<script>
+/* ===================== Modèle ===================== */
+const PORTS = {
+  pc:['eth0'], server:['eth0'],
+  switch:['Fa0/1','Fa0/2','Fa0/3','Fa0/4','Fa0/5','Fa0/6','Fa0/7','Fa0/8'],
+  router:['Fa0/0','Fa0/1','Fa1/0','Fa1/1'],
+  hub:['P1','P2','P3','P4']
+};
+const ICON = {pc:'💻',server:'🖥️',switch:'🔀',router:'🛰️',hub:'⭐'};
+const NAMEP = {pc:'PC',server:'SRV',switch:'SW',router:'R',hub:'HUB'};
+
+let devices=[], links=[], seq=1;
+let mode='design', palType=null, linking=false, linkFrom=null, selected=null, drag=null;
+const stage=document.getElementById('stage'), wires=document.getElementById('wires');
+
+/* ===================== Utilitaires IP ===================== */
+function ipToInt(ip){const p=(ip||'').trim().split('.');if(p.length!==4)return null;const n=p.map(Number);if(n.some((x,i)=>isNaN(x)||x<0||x>255||p[i]===''))return null;return ((n[0]<<24)>>>0)+(n[1]<<16)+(n[2]<<8)+n[3];}
+function maskToInt(m){m=(m||'').trim();if(!m)return null;if(m[0]==='/')m=m.slice(1);if(/^\d+$/.test(m)){const b=+m;if(b<0||b>32)return null;return b===0?0:((0xFFFFFFFF<<(32-b))>>>0);}return ipToInt(m);}
+function sameNet(ip1,ip2,mask){const a=ipToInt(ip1),b=ipToInt(ip2),m=maskToInt(mask);if(a==null||b==null||m==null)return false;return ((a&m)>>>0)===((b&m)>>>0);}
+function netId(ip,mask){const a=ipToInt(ip),m=maskToInt(mask);if(a==null||m==null)return null;return ((a&m)>>>0);}
+function validIp(ip){return ipToInt(ip)!=null;}
+function maskBits(m){let v=maskToInt(m);if(v==null)return -1;v=v>>>0;let b=0;for(let i=0;i<32;i++){if((v>>>(31-i))&1)b++;}return b;}
+
+/* ===================== Helpers modèle ===================== */
+const byId=id=>devices.find(d=>d.id===id);
+const isTrunkRif=it=>Array.isArray(it.subifs);
+function mkDevice(type,x,y){
+  const same=devices.filter(d=>d.type===type).length+1;
+  const ifs=PORTS[type].map(nm=>{
+    const o={name:nm,ip:'',mask:(type==='pc'||type==='server')?'255.255.255.0':''};
+    if(type==='switch'){o.mode='access';o.vlan=1;}
+    return o;
+  });
+  const dev={id:'d'+(seq++),type,name:NAMEP[type]+same,x,y,interfaces:ifs,gateway:'',routes:[]};
+  if(type==='pc'||type==='server'){dev.dhcpClient=false;dev.dnsServer='';}
+  if(type==='router'||type==='server')dev.dhcp=[];
+  if(type==='server'){dev.dns=[];dev.web={on:false,title:'Accueil',body:'Bienvenue sur le serveur web du lycée.'};}
+  if(type==='router'){dev.fw=[];dev.fwDefault='permit';}
+  return dev;
+}
+function freeIface(devId){const d=byId(devId);for(let i=0;i<d.interfaces.length;i++){if(!ifConnected(devId,i))return i;}return -1;}
+function ifConnected(devId,ifIdx){return links.some(l=>(l.aDev===devId&&l.aIf===ifIdx)||(l.bDev===devId&&l.bIf===ifIdx));}
+function intToIp(n){n=n>>>0;return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.');}
+function effIp(d){return d.dhcpClient?((d._lease&&d._lease.ip)||''):d.interfaces[0].ip;}
+function effMask(d){return d.dhcpClient?((d._lease&&d._lease.mask)||''):d.interfaces[0].mask;}
+function effGw(d){return d.dhcpClient?((d._lease&&d._lease.gw)||''):d.gateway;}
+function effDns(d){return d.dhcpClient?((d._lease&&d._lease.dns)||''):(d.dnsServer||'');}
+function deviceByIp(ip){for(const d of devices){if((d.type==='pc'||d.type==='server')&&effIp(d)===ip)return d;for(const it of d.interfaces){if(isTrunkRif(it)){for(const s of (it.subifs||[]))if(s.ip===ip)return d;}else if(it.ip===ip)return d;}}return null;}
+function resolveName(hostId,name){
+  const h=byId(hostId),dnsIp=effDns(h);
+  if(!validIp(dnsIp))return {err:'Aucun serveur DNS configuré sur cet hôte.'};
+  if(!resolvePing(hostId,dnsIp).ok)return {err:'Serveur DNS '+dnsIp+' injoignable.'};
+  const srv=deviceByIp(dnsIp);
+  if(!srv||!(srv.dns&&srv.dns.length))return {err:dnsIp+' ne fait pas serveur DNS.'};
+  const rec=srv.dns.find(r=>(r.name||'').toLowerCase()===name.toLowerCase());
+  if(!rec||!validIp(rec.ip))return {err:'Nom inconnu : '+name,server:srv.name,dnsIp};
+  return {ip:rec.ip,server:srv.name,dnsIp};
+}
+function httpGet(hostId,target){
+  let ip=target,name=null;
+  if(!validIp(target)){const r=resolveName(hostId,target);if(r.err)return {err:r.err};ip=r.ip;name=target;}
+  const reach=resolvePing(hostId,ip);if(!reach.ok)return {err:'Serveur '+ip+' injoignable ('+reach.log.join(' ')+')'};
+  const srv=deviceByIp(ip);if(!srv||!srv.web||!srv.web.on)return {err:'Aucun serveur web actif sur '+ip+' (port 80 fermé).'};
+  return {title:srv.web.title||'(sans titre)',body:srv.web.body||'',server:srv.name,ip,name};
+}
+function dhcpServers(){return devices.filter(d=>(d.type==='router'||d.type==='server')&&(d.dhcp||[]).length);}
+function assignLeases(){
+  devices.forEach(d=>{if(d.dhcpClient)d._lease=null;});
+  const taken={};
+  const use=(ip,mask)=>{if(!validIp(ip)||maskToInt(mask)==null)return;const k=netId(ip,mask);(taken[k]=taken[k]||new Set()).add(ipToInt(ip)>>>0);};
+  devices.forEach(d=>{
+    if((d.type==='pc'||d.type==='server')&&!d.dhcpClient)use(d.interfaces[0].ip,d.interfaces[0].mask);
+    d.interfaces.forEach(it=>{if(isTrunkRif(it)){(it.subifs||[]).forEach(s=>use(s.ip,s.mask));}else use(it.ip,it.mask);});
+  });
+  devices.filter(d=>d.dhcpClient).sort((a,b)=>a.name.localeCompare(b.name)).forEach(h=>{
+    const seg=reachEndpoints(h.id,0);
+    for(const srv of dhcpServers()){
+      let sip=null;for(const k of seg){if(epDev(k)===srv.id){sip=epIp(k);break;}}
+      if(!sip)continue;
+      const pool=(srv.dhcp||[]).find(p=>maskToInt(p.mask)!=null&&netId(sip,p.mask)===netId(p.net,p.mask));
+      if(!pool)continue;
+      const first=ipToInt(pool.first),last=ipToInt(pool.last);if(first==null||last==null)continue;
+      const k=netId(pool.net,pool.mask);const set=taken[k]=taken[k]||new Set();
+      if(validIp(pool.gw))set.add(ipToInt(pool.gw)>>>0);
+      for(let a=first;a<=last;a++){if(!set.has(a>>>0)){set.add(a>>>0);h._lease={ip:intToIp(a),mask:pool.mask,gw:pool.gw||'',dns:pool.dns||'',by:srv.name};break;}}
+      if(h._lease)break;
+    }
+  });
+}
+
+/* ===================== Rendu ===================== */
+function esc(s){return (s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function render(){
+  document.querySelectorAll('.node').forEach(n=>n.remove());
+  devices.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='node'+(selected===d.id?' sel':'');
+    el.dataset.type=d.type; el.dataset.id=d.id;
+    el.style.left=d.x+'px'; el.style.top=d.y+'px';
+    const ip=(d.type==='pc'||d.type==='server')?(effIp(d)||''):'';
+    el.innerHTML=`<div class="box">${ICON[d.type]}</div><div class="lbl">${esc(d.name)}</div>${ip?`<div class="ip">${esc(ip)}</div>`:''}`;
+    stage.appendChild(el);
+  });
+  renderWires();
+}
+function renderWires(){
+  wires.innerHTML='';
+  links.forEach(l=>{
+    const a=byId(l.aDev),b=byId(l.bDev);if(!a||!b)return;
+    const up=ifConnected(l.aDev,l.aIf)&&ifConnected(l.bDev,l.bIf);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',a.x);ln.setAttribute('y1',a.y);ln.setAttribute('x2',b.x);ln.setAttribute('y2',b.y);
+    ln.setAttribute('stroke',up?'#22c55e':'#475569');ln.setAttribute('stroke-width','2.5');
+    wires.appendChild(ln);
+    ifLabel(a.x+(b.x-a.x)*0.24,a.y+(b.y-a.y)*0.24,labelLines(a,l.aIf));
+    ifLabel(a.x+(b.x-a.x)*0.76,a.y+(b.y-a.y)*0.76,labelLines(b,l.bIf));
+  });
+}
+function portLabel(d,i){const it=d.interfaces[i];let t=it.name;if(d.type==='switch'){t+= it.mode==='trunk'?' (T)':(' v'+(it.vlan||1));}else if(d.type==='router'&&isTrunkRif(it)){t+=' .1Q';}return t;}
+function labelLines(d,i){
+  const it=d.interfaces[i];
+  if(d.type==='pc'||d.type==='server'){const ip=effIp(d);return ip?[it.name,ip]:[it.name];}
+  if(d.type==='switch'){return [it.name+(it.mode==='trunk'?' ·T':' ·v'+(it.vlan||1))];}
+  if(d.type==='hub'){return [it.name];}
+  if(d.type==='router'){
+    if(isTrunkRif(it)){const ls=[it.name+' ·802.1Q'];(it.subifs||[]).forEach(s=>{if(s.ip)ls.push('v'+(s.vlan||'?')+' '+s.ip);});return ls;}
+    return it.ip?[it.name,it.ip]:[it.name];
+  }
+  return [it.name];
+}
+function ifLabel(x,y,lines){
+  const NS='http://www.w3.org/2000/svg';
+  const t=document.createElementNS(NS,'text');t.setAttribute('x',x);t.setAttribute('y',y-((lines.length-1)*5)-3);t.setAttribute('text-anchor','middle');t.setAttribute('class','iflbl');
+  lines.forEach((ln,i)=>{const ts=document.createElementNS(NS,'tspan');ts.setAttribute('x',x);ts.setAttribute('dy',i===0?0:10);if(i>0)ts.setAttribute('class','ipsub');ts.textContent=ln;t.appendChild(ts);});
+  wires.appendChild(t);
+}
+
+/* ===================== Pose / sélection / drag ===================== */
+function pickPal(type,el){
+  if(mode!=='design')return toast('Passe en Conception pour ajouter des équipements.');
+  document.querySelectorAll('.pal').forEach(p=>p.classList.remove('sel'));
+  if(palType===type){palType=null;return;}
+  palType=type;el.classList.add('sel');toast('Clique la zone pour poser le '+NAMEP[type]);
+}
+stage.addEventListener('click',e=>{
+  if(mode==='design'&&palType&&(e.target===stage||e.target.id==='wires')){
+    const r=stage.getBoundingClientRect();
+    const d=mkDevice(palType,e.clientX-r.left,e.clientY-r.top);
+    devices.push(d);palType=null;document.querySelectorAll('.pal').forEach(p=>p.classList.remove('sel'));
+    render();select(d.id);persist();
+  }
+});
+stage.addEventListener('mousedown',e=>{
+  const node=e.target.closest('.node');if(!node)return;
+  const id=node.dataset.id;
+  if(linking){handleLinkClick(id);return;}
+  select(id);
+  if(mode==='design'){const d=byId(id);const r=stage.getBoundingClientRect();drag={id,dx:d.x-(e.clientX-r.left),dy:d.y-(e.clientY-r.top)};}
+});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;const r=stage.getBoundingClientRect();const d=byId(drag.id);
+  d.x=Math.max(42,Math.min(r.width-10,e.clientX-r.left+drag.dx));
+  d.y=Math.max(30,Math.min(r.height-10,e.clientY-r.top+drag.dy));
+  const el=document.querySelector('.node[data-id="'+drag.id+'"]');if(el){el.style.left=d.x+'px';el.style.top=d.y+'px';}
+  renderWires();
+});
+window.addEventListener('mouseup',()=>{if(drag){drag=null;persist();}});
+function select(id){
+  selected=id;
+  document.querySelectorAll('.node').forEach(n=>n.classList.toggle('sel',n.dataset.id===id));
+  if(mode==='sim'){const d=byId(id);if(d&&(d.type==='pc'||d.type==='server'))openTerminal(id);else showProps(id);}
+  else showProps(id);
+}
+
+/* ===================== Liaison ===================== */
+function toggleLink(){
+  if(mode!=='design')return toast('Les liaisons se créent en Conception.');
+  linking=!linking;linkFrom=null;
+  document.getElementById('linkBtn').classList.toggle('on',linking);
+  stage.classList.toggle('linking',linking);
+  toast(linking?'Clique le 1er équipement à relier':'Mode liaison désactivé');
+}
+function handleLinkClick(id){
+  if(linkFrom===null){linkFrom=id;toast('…puis clique le 2e équipement');return;}
+  if(linkFrom===id){toast('Choisis un autre équipement');return;}
+  const a=freeIface(linkFrom),b=freeIface(id);
+  if(a<0)return toast('⚠️ '+byId(linkFrom).name+' n’a plus de port libre');
+  if(b<0)return toast('⚠️ '+byId(id).name+' n’a plus de port libre');
+  links.push({aDev:linkFrom,aIf:a,bDev:id,bIf:b});
+  toast('✅ '+byId(linkFrom).name+' ('+byId(linkFrom).interfaces[a].name+') ⟷ '+byId(id).name+' ('+byId(id).interfaces[b].name+')');
+  linkFrom=null;render();persist();if(selected)showProps(selected);
+}
+
+/* ===================== Panneau & plein écran ===================== */
+function closeSide(){document.getElementById('side').style.display='none';document.getElementById('reopen').style.display='block';setTimeout(renderWires,60);}
+function openSide(){document.getElementById('side').style.display='flex';document.getElementById('reopen').style.display='none';setTimeout(renderWires,60);}
+function ensureSideOpen(){if(document.getElementById('side').style.display==='none')openSide();}
+function toggleFull(){const el=document.documentElement;if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el);}else{document.exitFullscreen&&document.exitFullscreen();}}
+function toggleMode(){setMode(mode==='design'?'sim':'design');}
+function toggleDoc(){const el=document.getElementById('doc');const show=el.style.display!=='block';el.style.display=show?'block':'none';document.getElementById('docBtn').classList.toggle('on',show);if(show)el.scrollTop=0;}
+document.addEventListener('fullscreenchange',()=>setTimeout(renderWires,120));
+
+/* ===================== Panneau propriétés ===================== */
+function showProps(id){
+  if(id)ensureSideOpen();
+  const head=document.getElementById('sideHead'),body=document.getElementById('sideBody');
+  const d=byId(id);
+  if(!d){head.textContent='Propriétés';body.innerHTML='<div class="empty">Sélectionne un équipement.</div>';return;}
+  head.innerHTML=`${ICON[d.type]} ${esc(d.name)}`;
+  let h=`<label class="f">Nom</label><input class="f" value="${esc(d.name)}" onchange="setName('${id}',this.value)">`;
+
+  if(d.type==='pc'||d.type==='server'){
+    const i0=d.interfaces[0];const dh=!!d.dhcpClient;
+    h+=`<div class="if"><div class="t">${i0.name} <span class="st ${ifConnected(id,0)?'up':'down'}">${ifConnected(id,0)?'● connecté':'○ non relié'}</span></div>
+      <label class="f" style="margin-top:0">Attribution de l’adresse</label>
+      <select class="f" onchange="setDhcpClient('${id}',this.value)">
+        <option value="static" ${!dh?'selected':''}>Statique</option>
+        <option value="dhcp" ${dh?'selected':''}>Automatique (DHCP)</option></select>`;
+    if(!dh){
+      h+=`<label class="f">Adresse IP</label><input class="f" value="${esc(i0.ip)}" oninput="setIf('${id}',0,'ip',this.value)" placeholder="192.168.1.10">
+        <label class="f">Masque</label><input class="f" value="${esc(i0.mask)}" oninput="setIf('${id}',0,'mask',this.value)" placeholder="255.255.255.0"></div>
+        <label class="f">Passerelle par défaut</label><input class="f" value="${esc(d.gateway)}" oninput="setGw('${id}',this.value)" placeholder="192.168.1.1">
+        <label class="f">Serveur DNS</label><input class="f" value="${esc(d.dnsServer||'')}" oninput="setDns('${id}',this.value)" placeholder="192.168.1.200">`;
+    } else {
+      assignLeases();const L=d._lease;
+      h+=`</div><div class="pill">${L?('Bail obtenu : <b>'+esc(L.ip)+'</b> / '+esc(fmtMask(L.mask))+' · passerelle '+esc(L.gw||'—')+(L.dns?(' · DNS '+esc(L.dns)):'')+' · via '+esc(L.by)):'Aucun bail — en Simulation, vérifie qu’un serveur DHCP est joignable dans ce VLAN.'}</div>`;
+    }
+    if(d.type==='server'){h+=dhcpServiceHtml(d,id);h+=serverServicesHtml(d,id);}
+  }
+  else if(d.type==='switch'){
+    h+=`<div class="sec">Ports / VLAN</div>`;
+    let any=false;
+    d.interfaces.forEach((it,i)=>{
+      if(!ifConnected(id,i))return; any=true;
+      h+=`<div class="if"><div class="t">${it.name} → ${esc(neighborName(id,i))}</div>
+        <div class="row">
+          <div><label class="f" style="margin-top:0">Mode</label>
+            <select class="f" onchange="setPort('${id}',${i},'mode',this.value)">
+              <option value="access" ${(it.mode||'access')==='access'?'selected':''}>Accès</option>
+              <option value="trunk" ${it.mode==='trunk'?'selected':''}>Trunk</option></select></div>
+          <div><label class="f" style="margin-top:0">VLAN</label>
+            <input class="f" value="${it.vlan||1}" ${it.mode==='trunk'?'disabled':''} onchange="setPort('${id}',${i},'vlan',this.value)"></div>
+        </div></div>`;
+    });
+    if(!any)h+=`<div class="empty">Relie d’abord des équipements, puis affecte chaque port à un VLAN (mode Accès) ou en Trunk (vers un autre switch / un routeur).</div>`;
+    h+=`<div class="pill" style="margin-top:8px">Mode <b>Accès</b> = un poste dans un VLAN. Mode <b>Trunk</b> = transporte tous les VLAN (lien switch-switch ou vers routeur 802.1Q).</div>`;
+  }
+  else if(d.type==='router'){
+    h+=`<div class="sec">Interfaces</div>`;
+    d.interfaces.forEach((it,i)=>{
+      const trunk=isTrunkRif(it);const conn=ifConnected(id,i);
+      h+=`<div class="if"><div class="t">${it.name} <span class="st ${conn?'up':'down'}">${conn?'● connecté':'○ libre'}</span></div>
+        <label class="f" style="margin-top:0">Type d’interface</label>
+        <select class="f" onchange="setRMode('${id}',${i},this.value)">
+          <option value="routed" ${!trunk?'selected':''}>Routée (IP directe)</option>
+          <option value="trunk" ${trunk?'selected':''}>Trunk 802.1Q (sous-interfaces VLAN)</option></select>`;
+      if(!trunk){
+        h+=`<label class="f">Adresse IP</label><input class="f" value="${esc(it.ip)}" oninput="setIf('${id}',${i},'ip',this.value)" placeholder="192.168.1.1">
+            <label class="f">Masque</label><input class="f" value="${esc(it.mask)}" oninput="setIf('${id}',${i},'mask',this.value)" placeholder="255.255.255.0">`;
+      } else {
+        (it.subifs||[]).forEach((s,si)=>{
+          h+=`<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono">${it.name}.${esc(s.vlan||'?')}</span>
+              <button class="xbtn" onclick="delSubif('${id}',${i},${si})">✕</button></div>
+            <div class="row"><div><label class="f">VLAN</label><input class="f" value="${esc(s.vlan)}" onchange="setSubif('${id}',${i},${si},'vlan',this.value)" placeholder="10"></div>
+            <div><label class="f">Masque</label><input class="f" value="${esc(s.mask)}" oninput="setSubif('${id}',${i},${si},'mask',this.value)" placeholder="/24"></div></div>
+            <label class="f">IP (passerelle du VLAN)</label><input class="f" value="${esc(s.ip)}" oninput="setSubif('${id}',${i},${si},'ip',this.value)" placeholder="192.168.10.1"></div>`;
+        });
+        h+=`<button class="btn" style="width:100%;margin-top:8px" onclick="addSubif('${id}',${i})">➕ Sous-interface VLAN</button>`;
+      }
+      h+=`</div>`;
+    });
+
+    h+=`<div class="sec">Routes statiques</div>`;
+    if((d.routes||[]).length){
+      d.routes.forEach((rt,i)=>{
+        h+=`<div class="if" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="mono">${esc(rt.dest)} ${esc(fmtMask(rt.mask))} <span class="dim">→</span> ${esc(rt.nextHop)}</span>
+          <button class="xbtn" onclick="delRoute('${id}',${i})">✕</button></div>`;
+      });
+    } else h+=`<div class="empty" style="margin-bottom:8px">Aucune route. Nécessaire pour les réseaux non directement connectés.</div>`;
+    h+=`<div class="if"><label class="f" style="margin-top:0">Réseau de destination</label><input class="f" id="rtDest" placeholder="192.168.3.0">
+        <label class="f">Masque</label><input class="f" id="rtMask" placeholder="/24">
+        <label class="f">Prochain saut</label><input class="f" id="rtNh" placeholder="10.0.0.2">
+        <button class="btn primary" style="width:100%;margin-top:10px" onclick="addRoute('${id}')">➕ Ajouter la route</button></div>`;
+
+    h+=`<div class="sec">Pare-feu</div>
+        <label class="f" style="margin-top:0">Politique par défaut</label>
+        <select class="f" onchange="setFwDef('${id}',this.value)">
+          <option value="permit" ${(d.fwDefault||'permit')==='permit'?'selected':''}>Autoriser (par défaut)</option>
+          <option value="deny" ${d.fwDefault==='deny'?'selected':''}>Refuser (deny implicite)</option></select>`;
+    if((d.fw||[]).length){
+      d.fw.forEach((r,i)=>{
+        const s=r.srcIp?r.srcIp+' '+fmtMask(r.srcMask):'tout';
+        const t=r.dstIp?r.dstIp+' '+fmtMask(r.dstMask):'tout';
+        h+=`<div class="if" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="mono"><b style="color:${r.action==='permit'?'#4ade80':'#f87171'}">${r.action==='permit'?'PERMIT':'DENY'}</b> ${r.proto} ${esc(s)} <span class="dim">→</span> ${esc(t)}${r.port?(' :'+r.port):''}</span>
+          <button class="xbtn" onclick="delFw('${id}',${i})">✕</button></div>`;
+      });
+    } else h+=`<div class="empty" style="margin:8px 0">Aucune règle. Les règles sont évaluées de haut en bas, 1ère correspondance appliquée.</div>`;
+    h+=`<div class="if"><div class="row">
+          <div><label class="f" style="margin-top:0">Action</label><select class="f" id="fwAct"><option value="permit">Autoriser</option><option value="deny">Refuser</option></select></div>
+          <div><label class="f" style="margin-top:0">Protocole</label><select class="f" id="fwProto"><option value="any">tout</option><option value="icmp">ICMP (ping)</option><option value="tcp">TCP</option><option value="udp">UDP</option></select></div>
+        </div>
+        <label class="f">Source (IP + masque, vide = tout)</label><div class="row"><input class="f" id="fwSi" placeholder="192.168.1.0"><input class="f" id="fwSm" placeholder="/24"></div>
+        <label class="f">Destination (IP + masque, vide = tout)</label><div class="row"><input class="f" id="fwDi" placeholder="192.168.2.0"><input class="f" id="fwDm" placeholder="/24"></div>
+        <label class="f">Port (TCP/UDP, optionnel)</label><input class="f" id="fwPort" placeholder="80">
+        <button class="btn primary" style="width:100%;margin-top:10px" onclick="addFw('${id}')">➕ Ajouter la règle</button></div>`;
+    h+=dhcpServiceHtml(d,id);
+  }
+  else {
+    const used=links.filter(l=>l.aDev===id||l.bDev===id).length;
+    h+=`<div class="empty" style="margin-top:12px">Concentrateur (niveau 1) — aucune configuration. Il répète le signal sur tous les ports (pas de VLAN).<br><br>Ports utilisés : <b>${used}/${d.interfaces.length}</b></div>`;
+  }
+  h+=`<div style="display:flex;gap:8px;margin-top:16px">
+       <button class="btn danger" onclick="delDevice('${id}')">🗑️ Supprimer</button>
+       <button class="btn" onclick="delLinksOf('${id}')">✂️ Débrancher</button></div>`;
+  body.innerHTML=h;
+}
+function neighborName(id,i){const l=links.find(l=>(l.aDev===id&&l.aIf===i)||(l.bDev===id&&l.bIf===i));if(!l)return '—';const o=l.aDev===id?l.bDev:l.aDev;const d=byId(o);return d?d.name:'—';}
+function fmtMask(m){m=String(m||'');return (/^\d+$/.test(m))?('/'+m):(m[0]==='/'?m:m);}
+
+/* ---- setters ---- */
+function setName(id,v){byId(id).name=v.trim()||byId(id).name;render();showProps(id);persist();}
+function setIf(id,i,k,v){byId(id).interfaces[i][k]=v.trim();render();persist();}
+function setGw(id,v){byId(id).gateway=v.trim();persist();}
+function setPort(id,i,k,v){const it=byId(id).interfaces[i];if(k==='vlan'){const n=parseInt(v,10);it.vlan=isNaN(n)?1:n;}else{it.mode=v;}render();showProps(id);persist();}
+function setRMode(id,i,v){const it=byId(id).interfaces[i];if(v==='trunk'){it.subifs=it.subifs||[];}else{delete it.subifs;}render();showProps(id);persist();}
+function addSubif(id,i){const it=byId(id).interfaces[i];it.subifs=it.subifs||[];it.subifs.push({vlan:'',ip:'',mask:'255.255.255.0'});showProps(id);persist();}
+function setSubif(id,i,si,k,v){const s=byId(id).interfaces[i].subifs[si];s[k]=(k==='vlan')?v.trim():v.trim();render();persist();}
+function delSubif(id,i,si){byId(id).interfaces[i].subifs.splice(si,1);showProps(id);persist();}
+function addRoute(id){
+  const d=byId(id);d.routes=d.routes||[];
+  const dest=(V('rtDest')),mask=(V('rtMask')),nh=(V('rtNh'));
+  if(!validIp(dest)&&dest!=='0.0.0.0')return toast('Réseau destination invalide');
+  if(maskToInt(mask)==null)return toast('Masque invalide');
+  if(!validIp(nh))return toast('Prochain saut invalide');
+  d.routes.push({dest,mask,nextHop:nh});showProps(id);persist();toast('Route ajoutée');
+}
+function delRoute(id,i){byId(id).routes.splice(i,1);showProps(id);persist();}
+function setFwDef(id,v){byId(id).fwDefault=v;persist();}
+function addFw(id){
+  const d=byId(id);d.fw=d.fw||[];
+  const si=V('fwSi'),sm=V('fwSm'),di=V('fwDi'),dm=V('fwDm'),port=V('fwPort');
+  if(si&&!validIp(si))return toast('IP source invalide');
+  if(di&&!validIp(di))return toast('IP destination invalide');
+  d.fw.push({action:V('fwAct'),proto:V('fwProto'),srcIp:si,srcMask:sm||'255.255.255.255',dstIp:di,dstMask:dm||'255.255.255.255',port});
+  showProps(id);persist();toast('Règle ajoutée');
+}
+function delFw(id,i){byId(id).fw.splice(i,1);showProps(id);persist();}
+function dhcpServiceHtml(d,id){
+  let h=`<div class="sec">Service DHCP</div>`;
+  if((d.dhcp||[]).length){
+    d.dhcp.forEach((p,i)=>{h+=`<div class="if" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span class="mono">${esc(p.net)} ${esc(fmtMask(p.mask))} · ${esc(p.first)}–${esc(p.last)} · gw ${esc(p.gw||'—')}</span>
+      <button class="xbtn" onclick="delPool('${id}',${i})">✕</button></div>`;});
+  } else h+=`<div class="empty" style="margin-bottom:8px">Aucune étendue. Ajoute une plage d’adresses à distribuer aux clients de ce réseau.</div>`;
+  h+=`<div class="if">
+     <label class="f" style="margin-top:0">Réseau / masque</label><div class="row"><input class="f" id="poNet" placeholder="192.168.1.0"><input class="f" id="poMask" placeholder="/24"></div>
+     <label class="f">Passerelle distribuée</label><input class="f" id="poGw" placeholder="192.168.1.1">
+     <label class="f">Plage (première – dernière)</label><div class="row"><input class="f" id="poFirst" placeholder="192.168.1.100"><input class="f" id="poLast" placeholder="192.168.1.150"></div>
+     <label class="f">Serveur DNS distribué (optionnel)</label><input class="f" id="poDns" placeholder="192.168.1.200">
+     <button class="btn primary" style="width:100%;margin-top:10px" onclick="addPool('${id}')">➕ Ajouter l’étendue</button></div>`;
+  return h;
+}
+function addPool(id){const d=byId(id);d.dhcp=d.dhcp||[];const net=V('poNet'),mask=V('poMask'),gw=V('poGw'),first=V('poFirst'),last=V('poLast');
+  if(!validIp(net))return toast('Réseau invalide');if(maskToInt(mask)==null)return toast('Masque invalide');
+  if(!validIp(first)||!validIp(last))return toast('Plage invalide');
+  const dns=V('poDns');if(dns&&!validIp(dns))return toast('DNS invalide');
+  d.dhcp.push({net,mask,gw,first,last,dns});assignLeases();render();showProps(id);persist();toast('Étendue DHCP ajoutée');}
+function delPool(id,i){byId(id).dhcp.splice(i,1);assignLeases();render();showProps(id);persist();}
+function setDhcpClient(id,v){const d=byId(id);d.dhcpClient=(v==='dhcp');assignLeases();render();showProps(id);persist();}
+function setDns(id,v){byId(id).dnsServer=v.trim();persist();}
+function serverServicesHtml(d,id){
+  let h=`<div class="sec">Serveur DNS</div>`;
+  if((d.dns||[]).length){
+    d.dns.forEach((r,i)=>{h+=`<div class="if" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="mono">${esc(r.name)} <span class="dim">→</span> ${esc(r.ip)}</span><button class="xbtn" onclick="delDns('${id}',${i})">✕</button></div>`;});
+  } else h+=`<div class="empty" style="margin-bottom:8px">Aucun enregistrement. Associe un nom de domaine à une IP.</div>`;
+  h+=`<div class="if"><div class="row"><div><label class="f" style="margin-top:0">Nom</label><input class="f" id="dnsName" placeholder="www.lycee.fr"></div><div><label class="f" style="margin-top:0">IP</label><input class="f" id="dnsIp" placeholder="192.168.1.200"></div></div>
+     <button class="btn primary" style="width:100%;margin-top:10px" onclick="addDns('${id}')">➕ Ajouter l’enregistrement</button></div>`;
+  h+=`<div class="sec">Serveur web (HTTP)</div>
+     <label class="f" style="margin-top:0">État</label>
+     <select class="f" onchange="setWeb('${id}','on',this.value)"><option value="0" ${!d.web.on?'selected':''}>Désactivé</option><option value="1" ${d.web.on?'selected':''}>Activé (port 80)</option></select>
+     <label class="f">Titre de la page</label><input class="f" value="${esc(d.web.title)}" oninput="setWeb('${id}','title',this.value)" placeholder="Accueil">
+     <label class="f">Contenu</label><textarea class="f" style="min-height:70px;resize:vertical" oninput="setWeb('${id}','body',this.value)">${esc(d.web.body)}</textarea>`;
+  return h;
+}
+function addDns(id){const d=byId(id);d.dns=d.dns||[];const name=V('dnsName'),ip=V('dnsIp');if(!name)return toast('Nom requis');if(!validIp(ip))return toast('IP invalide');d.dns.push({name,ip});showProps(id);persist();toast('Enregistrement DNS ajouté');}
+function delDns(id,i){byId(id).dns.splice(i,1);showProps(id);persist();}
+function setWeb(id,k,v){const d=byId(id);if(k==='on')d.web.on=(v==='1');else d.web[k]=v;if(k==='on')showProps(id);persist();}
+function V(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function delDevice(id){links=links.filter(l=>l.aDev!==id&&l.bDev!==id);devices=devices.filter(d=>d.id!==id);selected=null;render();showProps(null);persist();}
+function delLinksOf(id){links=links.filter(l=>l.aDev!==id&&l.bDev!==id);render();showProps(id);persist();toast('Débranché');}
+
+/* ===================== Modes ===================== */
+function setMode(m){
+  mode=m;linking=false;linkFrom=null;palType=null;
+  document.getElementById('linkBtn').classList.remove('on');stage.classList.remove('linking');
+  document.querySelectorAll('.pal').forEach(p=>p.classList.remove('sel'));
+  document.getElementById('mDesign').classList.toggle('active',m==='design');
+  document.getElementById('mSim').classList.toggle('active',m==='sim');
+  const bdg=document.getElementById('modeBadge');
+  bdg.className=(m==='sim')?'sim':'design';
+  document.getElementById('modeBadgeTxt').textContent=(m==='sim')?'▶️ Mode Simulation':'✏️ Mode Conception';
+  bdg.querySelector('.swap').textContent=(m==='sim')?'↔ revenir à la conception':'↔ passer en simulation';
+  if(m==='sim'){assignLeases();render();document.getElementById('sideHead').textContent='Console';document.getElementById('sideBody').innerHTML='<div class="empty">Clique un <b>PC</b> ou un <b>serveur</b> pour ouvrir sa console (<b>ping</b>, <b>ipconfig</b>, <b>arp</b>). Bouton <b>📡 Trames</b> pour la capture.</div>';}
+  else{selected?showProps(selected):(document.getElementById('sideBody').innerHTML='<div class="empty">Sélectionne un équipement.</div>',document.getElementById('sideHead').textContent='Propriétés');}
+}
+
+/* ===================== Moteur réseau (L2 VLAN + L3 + ACL) ===================== */
+/* reachFrom : ensemble des points terminaux (hôtes / ports routeur / sous-interfaces)
+   joignables au niveau 2 depuis (dev,port) avec une trame étiquetée tv (null = non étiquetée),
+   en respectant les VLAN sur les switchs. Clés : H:dev | R:dev:port | S:dev:port:si */
+function reachFrom(startDev,startPort,startTv){
+  const endpoints=new Set(),visited=new Set();
+  function pushCable(dev,port,tv){
+    links.forEach(l=>{
+      let far=null;
+      if(l.aDev===dev&&l.aIf===port)far={dev:l.bDev,port:l.bIf};
+      else if(l.bDev===dev&&l.bIf===port)far={dev:l.aDev,port:l.aIf};
+      else return;
+      arrive(far.dev,far.port,tv);
+    });
+  }
+  function arrive(dev,port,tv){
+    const d=byId(dev);if(!d)return;
+    const key=dev+'|'+port+'|'+tv;if(visited.has(key))return;visited.add(key);
+    if(d.type==='pc'||d.type==='server'){endpoints.add('H:'+dev);return;}
+    if(d.type==='router'){
+      const it=d.interfaces[port];
+      if(isTrunkRif(it)){(it.subifs||[]).forEach((s,si)=>{if(tv!==null&&+s.vlan===+tv)endpoints.add('S:'+dev+':'+port+':'+si);});}
+      else{if(tv===null)endpoints.add('R:'+dev+':'+port);}
+      return;
+    }
+    if(d.type==='hub'){d.interfaces.forEach((_,p)=>{if(p!==port&&ifConnected(dev,p))pushCable(dev,p,tv);});return;}
+    // switch
+    const inP=d.interfaces[port],inMode=inP.mode||'access';
+    let vlan;
+    if(inMode==='access'){if(tv!==null&&tv!==(inP.vlan||1))return;vlan=inP.vlan||1;}
+    else{vlan=(tv===null)?1:tv;}
+    d.interfaces.forEach((outP,p)=>{
+      if(p===port||!ifConnected(dev,p))return;
+      const m=outP.mode||'access';
+      if(m==='access'){if((outP.vlan||1)===vlan)pushCable(dev,p,null);}
+      else{pushCable(dev,p,vlan);}
+    });
+  }
+  pushCable(startDev,startPort,startTv);
+  return endpoints;
+}
+const reachEndpoints=(dev,port)=>reachFrom(dev,port,null);
+function epIp(k){const [t,id,port,si]=k.split(':');const d=byId(id);if(!d)return null;if(t==='H')return effIp(d);if(t==='R')return d.interfaces[+port].ip;if(t==='S')return d.interfaces[+port].subifs[+si].ip;return null;}
+function epDev(k){return k.split(':')[1];}
+function findEp(set,ip){for(const k of set){if(epIp(k)===ip)return k;}return null;}
+
+function matchHost(ip,mask,target){if(!ip)return true;if(!target)return false;if(mask&&maskToInt(mask)!=null)return sameNet(ip,target,mask);return ip===target;}
+function fwAllows(r,srcIp,dstIp,proto){
+  for(const rule of (r.fw||[])){
+    if(rule.proto&&rule.proto!=='any'&&rule.proto!==proto)continue;
+    if(!matchHost(rule.srcIp,rule.srcMask,srcIp))continue;
+    if(!matchHost(rule.dstIp,rule.dstMask,dstIp))continue;
+    return rule.action==='permit';
+  }
+  return (r.fwDefault||'permit')==='permit';
+}
+
+function resolvePing(srcId,targetIp){
+  const d=byId(srcId);const sip=effIp(d),smask=effMask(d),sgw=effGw(d);
+  if(!validIp(sip))return {ok:false,log:[d.dhcpClient?'Pas de bail DHCP (aucun serveur joignable).':'Cet hôte n’a pas d’adresse IP valide.']};
+  if(maskToInt(smask)==null)return {ok:false,log:['Masque invalide sur l’hôte.']};
+  if(!validIp(targetIp))return {ok:false,log:['Adresse cible invalide.']};
+  if(targetIp===sip)return {ok:true,log:['Boucle locale (vous-même).'],path:[srcId],dst:srcId};
+  const reach=reachEndpoints(srcId,0);
+  if(sameNet(sip,targetIp,smask)){
+    const k=findEp(reach,targetIp);
+    if(k)return {ok:true,log:['Même réseau — résolution ARP OK.'],path:devicePath(srcId,epDev(k)),dst:epDev(k)};
+    return {ok:false,log:['Hôte injoignable (pas de réponse ARP — vérifie le VLAN et le câblage).']};
+  }
+  if(!validIp(sgw))return {ok:false,log:['Réseau distant : aucune passerelle par défaut configurée.']};
+  if(!sameNet(sip,sgw,smask))return {ok:false,log:['Passerelle incohérente (pas dans le réseau de l’hôte).']};
+  const gk=findEp(reach,sgw);
+  if(!gk)return {ok:false,log:['Passerelle '+sgw+' injoignable (vérifie le VLAN / le trunk vers le routeur).']};
+  if(byId(epDev(gk)).type!=='router')return {ok:false,log:['La passerelle '+sgw+' n’est pas un routeur.']};
+  const fw=routerForward(epDev(gk),targetIp,new Set(),sip);
+  if(fw.ok)return {ok:true,log:fw.log,path:devicePath(srcId,fw.dst),dst:fw.dst,hops:fw.hops||0};
+  return {ok:false,log:fw.log};
+}
+function routerForward(routerId,targetIp,visited,srcIp){
+  const r=byId(routerId);
+  if(visited.has(routerId))return {ok:false,log:['Boucle de routage sur '+r.name+'.']};
+  visited.add(routerId);
+  if(!fwAllows(r,srcIp,targetIp,'icmp'))return {ok:false,log:['⛔ '+r.name+' : trafic bloqué par le pare-feu.']};
+  let best=null;
+  r.interfaces.forEach((it,i)=>{
+    if(isTrunkRif(it)){(it.subifs||[]).forEach((s,si)=>{if(validIp(s.ip)&&maskToInt(s.mask)!=null&&sameNet(s.ip,targetIp,s.mask)){const b=maskBits(s.mask);if(!best||b>best.bits)best={bits:b,kind:'connSub',port:i,vlan:+s.vlan};}});}
+    else if(validIp(it.ip)&&maskToInt(it.mask)!=null&&sameNet(it.ip,targetIp,it.mask)){const b=maskBits(it.mask);if(!best||b>best.bits)best={bits:b,kind:'conn',port:i};}
+  });
+  (r.routes||[]).forEach(rt=>{if(maskToInt(rt.mask)!=null&&validIp(rt.nextHop)&&netId(targetIp,rt.mask)===netId(rt.dest,rt.mask)){const b=maskBits(rt.mask);if(!best||b>best.bits)best={bits:b,kind:'static',nextHop:rt.nextHop};}});
+  if(!best)return {ok:false,log:[r.name+' : aucune route vers '+targetIp+'.']};
+  if(best.kind==='conn'||best.kind==='connSub'){
+    const reach=best.kind==='conn'?reachFrom(routerId,best.port,null):reachFrom(routerId,best.port,best.vlan);
+    const k=findEp(reach,targetIp);
+    const via=best.kind==='connSub'?(r.interfaces[best.port].name+'.'+best.vlan):r.interfaces[best.port].name;
+    if(k)return {ok:true,dst:epDev(k),hops:1,log:[r.name+' livre sur '+via+' (réseau directement connecté).']};
+    return {ok:false,log:[r.name+' : réseau connecté atteint mais '+targetIp+' ne répond pas.']};
+  }
+  // route statique
+  for(let i=0;i<r.interfaces.length;i++){
+    const it=r.interfaces[i];
+    if(isTrunkRif(it)){
+      for(const s of (it.subifs||[])){
+        if(validIp(s.ip)&&sameNet(s.ip,best.nextHop,s.mask)){
+          const nh=findEp(reachFrom(routerId,i,+s.vlan),best.nextHop);
+          if(nh&&byId(epDev(nh)).type==='router'){const sub=routerForward(epDev(nh),targetIp,visited,srcIp);sub.log=[r.name+' → '+best.nextHop+' (route statique).'].concat(sub.log||[]);if(sub.ok)sub.hops=(sub.hops||0)+1;return sub;}
+        }
+      }
+    } else if(validIp(it.ip)&&sameNet(it.ip,best.nextHop,it.mask)){
+      const nh=findEp(reachFrom(routerId,i,null),best.nextHop);
+      if(nh&&byId(epDev(nh)).type==='router'){const sub=routerForward(epDev(nh),targetIp,visited,srcIp);sub.log=[r.name+' → '+best.nextHop+' (route statique via '+it.name+').'].concat(sub.log||[]);if(sub.ok)sub.hops=(sub.hops||0)+1;return sub;}
+      return {ok:false,log:[r.name+' : prochain saut '+best.nextHop+' injoignable.']};
+    }
+  }
+  return {ok:false,log:[r.name+' : prochain saut '+best.nextHop+' hors de ses réseaux.']};
+}
+function devicePath(srcId,dstId){
+  const adj={};devices.forEach(d=>adj[d.id]=[]);links.forEach(l=>{adj[l.aDev].push(l.bDev);adj[l.bDev].push(l.aDev);});
+  const prev={[srcId]:null},q=[srcId];
+  while(q.length){const c=q.shift();if(c===dstId)break;(adj[c]||[]).forEach(n=>{if(!(n in prev)){prev[n]=c;q.push(n);}});}
+  if(!(dstId in prev))return null;const path=[];let c=dstId;while(c!==null){path.unshift(c);c=prev[c];}return path;
+}
+
+/* ===================== Terminal ===================== */
+let termDev=null,history=[],hIdx=0;
+function openTerminal(id){
+  ensureSideOpen();termDev=id;const d=byId(id);assignLeases();
+  document.getElementById('sideHead').innerHTML='🖥️ Console — '+esc(d.name);
+  document.getElementById('sideBody').innerHTML=`<div id="term"><div id="termOut"></div>
+    <div id="termIn"><span>${esc(d.name)}&gt;</span><input id="termInput" autocomplete="off" spellcheck="false"></div></div>`;
+  printLn('Console de '+d.name+'. Tape "aide" pour les commandes.','dim');
+  const ip=effIp(d);printLn(ip?('IP : '+ip+'  Masque : '+effMask(d)+(effGw(d)?('  Passerelle : '+effGw(d)):'')):(d.dhcpClient?'⚠️ Pas de bail DHCP (aucun serveur joignable).':'⚠️ Aucune IP (reviens en Conception).'),ip?'dim':'err');
+  const inp=document.getElementById('termInput');inp.focus();
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const v=inp.value;inp.value='';runCmd(v);}
+    else if(e.key==='ArrowUp'){if(hIdx>0){hIdx--;inp.value=history[hIdx]||'';}}
+    else if(e.key==='ArrowDown'){if(hIdx<history.length){hIdx++;inp.value=history[hIdx]||'';}}
+  });
+}
+function printLn(t,cls){const o=document.getElementById('termOut');if(!o)return;const s=document.createElement('div');if(cls)s.className=cls;s.textContent=t;o.appendChild(s);o.scrollTop=o.scrollHeight;}
+function runCmd(raw){
+  const d=byId(termDev);printLn(d.name+'> '+raw,'cmd');
+  const cmd=raw.trim();if(cmd){history.push(cmd);hIdx=history.length;}
+  const parts=cmd.split(/\s+/),c=(parts[0]||'').toLowerCase();if(!c)return;
+  if(c==='aide'||c==='help'||c==='?'){printLn('Commandes : ipconfig | ping <ip|nom> | nslookup <nom> | http <nom|ip> | arp | effacer | aide');return;}
+  if(c==='effacer'||c==='clear'||c==='cls'){document.getElementById('termOut').innerHTML='';return;}
+  if(c==='ipconfig'||c==='ifconfig'){assignLeases();const i0=d.interfaces[0];const ip=effIp(d),mask=effMask(d),gw=effGw(d);
+    printLn('Carte Ethernet '+i0.name+(d.dhcpClient?' (DHCP)':'')+' :');
+    printLn('   Adresse IPv4. . . . . : '+(ip||'(non attribuée)'));
+    printLn('   Masque de ss-réseau . : '+(mask||'(non configuré)'));
+    printLn('   Passerelle par défaut : '+(gw||'(aucune)'));
+    printLn('   Serveur DNS . . . . . : '+(effDns(d)||'(aucun)'));
+    if(d.dhcpClient)printLn('   Bail DHCP . . . . . . : '+(d._lease?('obtenu via '+d._lease.by):'AUCUN serveur DHCP joignable'),d._lease?'dim':'err');
+    return;}
+  if(c==='arp'){const seg=reachEndpoints(d.id,0);let any=false;printLn('Table ARP (même VLAN / réseau local) :');seg.forEach(k=>{const ip=epIp(k);if(ip){printLn('   '+ip.padEnd(18)+byId(epDev(k)).name);any=true;}});if(!any)printLn('   (aucune entrée)','dim');return;}
+  if(c==='ping'){let t=parts[1];if(!t)return printLn('Usage : ping <ip|nom>','err');
+    if(!validIp(t)){const vlan=hostVlan(d.id);cap(d.name,'DNS',effIp(d)||'0.0.0.0',effDns(d),'DNS',vlan,'Query A '+t);const r=resolveName(d.id,t);if(r.err)return printLn('Ping : '+r.err,'err');cap(r.server,d.name,r.dnsIp,effIp(d)||'0.0.0.0','DNS',vlan,'Response '+t+' → '+r.ip);printLn('Résolution DNS : '+t+' → '+r.ip+' (via '+r.server+')','dim');t=r.ip;}
+    doPing(d.id,t);return;}
+  if(c==='nslookup'||c==='ns'){const n=parts[1];if(!n)return printLn('Usage : nslookup <nom>','err');
+    const vlan=hostVlan(d.id);cap(d.name,'DNS',effIp(d)||'0.0.0.0',effDns(d),'DNS',vlan,'Query A '+n);
+    const r=resolveName(d.id,n);
+    if(r.err)return printLn(r.err,'err');
+    cap(r.server,d.name,r.dnsIp,effIp(d)||'0.0.0.0','DNS',vlan,'Response '+n+' → '+r.ip);
+    printLn('Serveur : '+r.server+' ('+r.dnsIp+')','dim');printLn('Nom     : '+n);printLn('Adresse : '+r.ip,'ok');return;}
+  if(c==='http'||c==='web'||c==='wget'){const u=(parts[1]||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'');if(!u)return printLn('Usage : http <nom|ip>','err');
+    const vlan=hostVlan(d.id);const res=httpGet(d.id,u);
+    if(!validIp(u)){cap(d.name,'DNS',effIp(d)||'0.0.0.0',effDns(d),'DNS',vlan,'Query A '+u);}
+    if(res.err)return printLn('HTTP : '+res.err,'err');
+    cap(d.name,res.server,effIp(d)||'0.0.0.0',res.ip,'HTTP',vlan,'GET / HTTP/1.1');
+    cap(res.server,d.name,res.ip,effIp(d)||'0.0.0.0','HTTP',vlan,'200 OK');
+    if((document.getElementById('sideHead').textContent||'').indexOf('Capture')>=0)showCapture();
+    printLn('Connexion à '+res.ip+' (port 80)…','dim');printLn('╔══════════════════════════════╗');printLn('  '+res.title,'ok');printLn('╚══════════════════════════════╝');printLn(res.body);return;}
+  printLn('Commande inconnue : "'+c+'". Tape "aide".','err');
+}
+function doPing(srcId,tgt){
+  assignLeases();
+  const r=resolvePing(srcId,tgt);
+  recordCapture(srcId,tgt,r);
+  if((document.getElementById('sideHead').textContent||'').indexOf('Capture')>=0)showCapture();
+  printLn('Envoi d’une requête ping sur '+tgt+' :','dim');
+  r.log.forEach(l=>printLn('   '+l,'dim'));
+  if(r.ok){
+    if(r.path&&r.path.length>1)animatePath(r.path);
+    if(r.dst){const el=document.querySelector('.node[data-id="'+r.dst+'"]');if(el){el.classList.add('ok');setTimeout(()=>el.classList.remove('ok'),700);}}
+    const ttl=128-(r.hops||0);
+    let i=0;const iv=setInterval(()=>{printLn('Réponse de '+tgt+' : octets=32 temps='+(1+Math.floor(Math.random()*4))+'ms TTL='+ttl,'ok');if(++i>=4){clearInterval(iv);printLn('Statistiques : 4 envoyés, 4 reçus, 0 perte (0%).','ok');}},260);
+  }else{let i=0;const iv=setInterval(()=>{printLn('Délai d’attente dépassé.','err');if(++i>=2){clearInterval(iv);printLn('Statistiques : 4 envoyés, 0 reçus, 4 perdus (100%).','err');}},200);}
+}
+function animatePath(path){
+  let i=0;
+  (function hop(){
+    if(i>=path.length-1)return;
+    const a=byId(path[i]),b=byId(path[i+1]);
+    const dot=document.createElement('div');dot.className='packet';stage.appendChild(dot);
+    const t0=performance.now(),dur=280;
+    (function step(t){const k=Math.min(1,(t-t0)/dur);dot.style.left=(a.x+(b.x-a.x)*k)+'px';dot.style.top=(a.y+(b.y-a.y)*k)+'px';if(k<1)requestAnimationFrame(step);else{dot.remove();i++;hop();}})(t0);
+  })();
+}
+
+/* ===================== Capture de trames (type Wireshark) ===================== */
+let captured=[];
+function hostVlan(id){const l=links.find(l=>(l.aDev===id&&l.aIf===0)||(l.bDev===id&&l.bIf===0));if(!l)return '';const o=l.aDev===id?l.bDev:l.aDev;const sw=byId(o);if(sw&&sw.type==='switch'){const p=l.aDev===id?l.bIf:l.aIf;const it=sw.interfaces[p];return it.mode==='trunk'?'':(it.vlan||1);}return '';}
+function cap(src,dst,sip,dip,proto,vlan,info){captured.push({n:captured.length+1,src,dst,sip,dip,proto,vlan:vlan===''?'':('VLAN '+vlan),info});if(captured.length>120)captured=captured.slice(-120);}
+function recordCapture(srcId,targetIp,res){
+  const d=byId(srcId);const sip=effIp(d)||'0.0.0.0';const vlan=hostVlan(srcId);const sName=d.name;
+  if(d.dhcpClient&&d._lease){cap(sName,'Broadcast','0.0.0.0','255.255.255.255','DHCP',vlan,'Discover');cap(d._lease.by,sName,d._lease.gw||d._lease.ip,d._lease.ip,'DHCP',vlan,'Offer '+d._lease.ip);cap(sName,'Broadcast','0.0.0.0','255.255.255.255','DHCP',vlan,'Request '+d._lease.ip);cap(d._lease.by,sName,d._lease.gw||d._lease.ip,d._lease.ip,'DHCP',vlan,'ACK');}
+  const same=sameNet(effIp(d),targetIp,effMask(d));
+  const arpWho=same?targetIp:effGw(d);
+  const tgt=res.dst?byId(res.dst):null;const tName=tgt?tgt.name:targetIp;
+  cap(sName,'Broadcast',sip,'','ARP',vlan,'Who has '+arpWho+' ? Tell '+sip);
+  if(res.ok)cap(arpWho,sName,arpWho,sip,'ARP',vlan,arpWho+' is at (MAC)');
+  if(res.ok){cap(sName,tName,sip,targetIp,'ICMP',vlan,'Echo (ping) request ×4');cap(tName,sName,targetIp,sip,'ICMP',vlan,'Echo (ping) reply ×4');}
+  else cap(sName,tName,sip,targetIp,'ICMP',vlan,'Echo request — sans réponse (timeout)');
+}
+function showCapture(){
+  ensureSideOpen();
+  document.getElementById('sideHead').innerHTML='📡 Capture de trames';
+  const rows=captured.slice(-80).reverse().map(r=>`<tr>
+    <td style="color:#64748b">${r.n}</td><td>${esc(r.src)}</td><td>${esc(r.dst)}</td>
+    <td><span class="tag">${esc(r.proto)}</span></td><td style="color:#64748b">${esc(r.vlan||'')}</td>
+    <td>${esc(r.info)}</td></tr>`).join('');
+  document.getElementById('sideBody').innerHTML=`<div class="empty" style="margin-bottom:8px">Trames des derniers ping (plus récentes en haut). Lance un ping dans une console pour en générer.</div>
+    <div style="overflow:auto"><table style="width:100%;border-collapse:collapse" class="mono">
+    <thead><tr style="color:var(--muted);text-align:left;font-size:10px"><th>#</th><th>Source</th><th>Dest.</th><th>Proto</th><th>VLAN</th><th>Info</th></tr></thead>
+    <tbody style="font-size:10.5px">${rows||'<tr><td colspan="6" class="dim">Aucune trame.</td></tr>'}</tbody></table></div>
+    <button class="btn" style="width:100%;margin-top:10px" onclick="captured=[];showCapture()">🧹 Vider la capture</button>`;
+}
+
+/* ===================== Sauvegarde / exemples ===================== */
+function persist(){try{localStorage.setItem('simreseau',JSON.stringify({devices,links,seq}));}catch(e){}}
+function restore(){try{const s=JSON.parse(localStorage.getItem('simreseau'));if(s&&s.devices){devices=s.devices;links=s.links||[];seq=s.seq||devices.length+1;}}catch(e){}}
+async function saveFile(){
+  const data=JSON.stringify({devices,links,seq},null,2);
+  try{const dl=await claude.use('downloads');if(dl){await dl.save({filename:'topologie.json',data});toast('Topologie enregistrée');return;}}catch(e){}
+  const blob=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='topologie.json';a.click();toast('Topologie enregistrée');
+}
+function openFile(){document.getElementById('fileIn').click();}
+document.getElementById('fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const s=JSON.parse(rd.result);devices=s.devices||[];links=s.links||[];seq=s.seq||devices.length+1;selected=null;render();showProps(null);persist();toast('Topologie chargée');}catch(err){toast('Fichier invalide');}};rd.readAsText(f);e.target.value='';});
+function clearAll(){if(!devices.length||confirm('Tout effacer ?')){devices=[];links=[];seq=1;selected=null;render();showProps(null);persist();}}
+function link(A,B){const a=freeIface(A.id),b=freeIface(B.id);links.push({aDev:A.id,aIf:a,bDev:B.id,bIf:b});}
+function loadExample(){
+  devices=[];links=[];seq=1;
+  const r=mkDevice('router',480,220);r.name='R1';
+  r.interfaces[0].ip='192.168.1.1';r.interfaces[0].mask='255.255.255.0';
+  r.interfaces[1].ip='192.168.2.1';r.interfaces[1].mask='255.255.255.0';
+  const sw1=mkDevice('switch',300,220);sw1.name='SW1';
+  const sw2=mkDevice('switch',660,220);sw2.name='SW2';
+  const pc1=mkDevice('pc',190,120);pc1.name='PC1';pc1.interfaces[0].ip='192.168.1.10';pc1.gateway='192.168.1.1';
+  const pc2=mkDevice('pc',190,330);pc2.name='PC2';pc2.interfaces[0].ip='192.168.1.11';pc2.gateway='192.168.1.1';
+  const pc3=mkDevice('pc',770,120);pc3.name='PC3';pc3.interfaces[0].ip='192.168.2.10';pc3.gateway='192.168.2.1';
+  const srv=mkDevice('server',770,330);srv.name='SRV1';srv.interfaces[0].ip='192.168.2.20';srv.gateway='192.168.2.1';
+  devices=[r,sw1,sw2,pc1,pc2,pc3,srv];
+  link(pc1,sw1);link(pc2,sw1);link(sw1,r);link(r,sw2);link(pc3,sw2);link(srv,sw2);
+  selected=null;render();showProps(null);persist();
+  toast('Exemple : 2 réseaux via R1 — en Simulation, ping 192.168.2.20 depuis PC1');
+}
+function loadVlanExample(){
+  devices=[];links=[];seq=1;
+  const r=mkDevice('router',520,210);r.name='R1';
+  // Fa0/0 en trunk 802.1Q avec 2 sous-interfaces (router-on-a-stick)
+  r.interfaces[0].subifs=[{vlan:'10',ip:'192.168.10.1',mask:'255.255.255.0'},{vlan:'20',ip:'192.168.20.1',mask:'255.255.255.0'}];
+  const sw=mkDevice('switch',330,210);sw.name='SW1';
+  // port vers routeur = trunk ; ports vers PC = accès VLAN 10/20
+  const pc1=mkDevice('pc',170,110);pc1.name='PC1';pc1.interfaces[0].ip='192.168.10.10';pc1.gateway='192.168.10.1';
+  const pc2=mkDevice('pc',170,320);pc2.name='PC2';pc2.interfaces[0].ip='192.168.20.10';pc2.gateway='192.168.20.1';
+  devices=[r,sw,pc1,pc2];
+  link(pc1,sw);link(pc2,sw);link(sw,r);
+  // configurer les modes de ports du switch (ordre des liens = Fa0/1 PC1, Fa0/2 PC2, Fa0/3 R1)
+  sw.interfaces[0].mode='access';sw.interfaces[0].vlan=10; // vers PC1
+  sw.interfaces[1].mode='access';sw.interfaces[1].vlan=20; // vers PC2
+  sw.interfaces[2].mode='trunk';                           // vers R1
+  selected=null;render();showProps(null);persist();
+  toast('Exemple VLAN (router-on-a-stick) — ping 192.168.20.10 depuis PC1 traverse les 2 VLAN');
+}
+
+function loadDhcpExample(){
+  devices=[];links=[];seq=1;
+  const r=mkDevice('router',500,210);r.name='R1';r.interfaces[0].ip='192.168.1.1';r.interfaces[0].mask='255.255.255.0';
+  r.dhcp=[{net:'192.168.1.0',mask:'255.255.255.0',gw:'192.168.1.1',first:'192.168.1.100',last:'192.168.1.150',dns:'192.168.1.200'}];
+  const sw=mkDevice('switch',320,210);sw.name='SW1';
+  const pc1=mkDevice('pc',165,110);pc1.name='PC1';pc1.dhcpClient=true;
+  const pc2=mkDevice('pc',165,320);pc2.name='PC2';pc2.dhcpClient=true;
+  const srv=mkDevice('server',660,320);srv.name='SRV1';srv.interfaces[0].ip='192.168.1.200';srv.gateway='192.168.1.1';
+  srv.dns=[{name:'www.lycee.fr',ip:'192.168.1.200'}];
+  srv.web={on:true,title:'Lycée — Intranet',body:'Bienvenue sur le serveur web du lycée.\nCours, TP et ressources réseau disponibles ici.'};
+  devices=[r,sw,pc1,pc2,srv];
+  link(pc1,sw);link(pc2,sw);link(sw,r);link(srv,sw);
+  assignLeases();selected=null;render();showProps(null);persist();
+  toast('Exemple DHCP+DNS+Web — sur PC1 : ipconfig, puis ping www.lycee.fr, puis http www.lycee.fr');
+}
+
+/* ===================== Export image (PNG) ===================== */
+function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function capLabel(g,x,y,t){g.save();g.lineWidth=3;g.strokeStyle='#0b1424';g.strokeText(t,x,y);g.fillStyle='#cbd5e1';g.fillText(t,x,y);g.restore();}
+function exportImage(){
+  if(!devices.length)return toast('Rien à exporter');
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  devices.forEach(d=>{minX=Math.min(minX,d.x);minY=Math.min(minY,d.y);maxX=Math.max(maxX,d.x);maxY=Math.max(maxY,d.y);});
+  const pad=70,W=Math.max(320,(maxX-minX)+pad*2),H=Math.max(220,(maxY-minY)+pad*2),sc=2;
+  const cv=document.createElement('canvas');cv.width=W*sc;cv.height=H*sc;const g=cv.getContext('2d');g.scale(sc,sc);
+  const ox=pad-minX,oy=pad-minY;
+  g.fillStyle='#0f172a';g.fillRect(0,0,W,H);
+  g.textAlign='center';
+  links.forEach(l=>{const a=byId(l.aDev),b=byId(l.bDev);if(!a||!b)return;const up=ifConnected(l.aDev,l.aIf)&&ifConnected(l.bDev,l.bIf);
+    g.strokeStyle=up?'#22c55e':'#475569';g.lineWidth=2.5;g.beginPath();g.moveTo(a.x+ox,a.y+oy);g.lineTo(b.x+ox,b.y+oy);g.stroke();
+    g.font='9px monospace';
+    capLabel(g,a.x+ox+(b.x-a.x)*0.26,a.y+oy+(b.y-a.y)*0.26-4,portLabel(a,l.aIf));
+    capLabel(g,a.x+ox+(b.x-a.x)*0.74,a.y+oy+(b.y-a.y)*0.74-4,portLabel(b,l.bIf));});
+  const col={pc:'#38bdf8',server:'#a78bfa',switch:'#22c55e',router:'#f59e0b',hub:'#64748b'};
+  devices.forEach(d=>{const x=d.x+ox,y=d.y+oy;
+    g.fillStyle='#273549';g.strokeStyle=col[d.type]||'#334155';g.lineWidth=2;roundRect(g,x-26,y-26,52,52,12);g.fill();g.stroke();
+    g.textBaseline='middle';g.font='24px sans-serif';g.fillStyle='#fff';g.fillText(ICON[d.type],x,y+1);
+    g.textBaseline='top';g.font='bold 11px sans-serif';g.fillStyle='#e2e8f0';g.fillText(d.name,x,y+30);
+    const ip=(d.type==='pc'||d.type==='server')?(effIp(d)||''):'';if(ip){g.font='9px monospace';g.fillStyle='#94a3b8';g.fillText(ip,x,y+44);}});
+  cv.toBlob(async blob=>{
+    if(!blob)return toast('Export impossible');
+    try{const dl=await claude.use('downloads');if(dl){await dl.save({filename:'schema-reseau.png',data:blob});toast('Schéma exporté (PNG)');return;}}catch(e){if(e&&e.code==='declined')return;}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='schema-reseau.png';a.click();toast('Schéma exporté');
+  },'image/png');
+}
+
+/* ===================== Toast / init ===================== */
+let toT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toT);toT=setTimeout(()=>t.classList.remove('show'),2600);}
+restore();
+if(!devices.length)loadExample();else render();
+window.addEventListener('keydown',e=>{if((e.key==='Delete')&&selected&&mode==='design'&&document.activeElement.tagName!=='INPUT'){delDevice(selected);}});
+window.addEventListener('resize',renderWires);
+</script>
+</body>
+</html>
