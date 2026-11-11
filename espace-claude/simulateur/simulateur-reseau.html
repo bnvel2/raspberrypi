@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur réseau</title>
+<style>*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c2833;background:#eef1f5}
+#app{display:flex;flex-direction:column;height:100vh;min-height:560px}
+header{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#1f3a5f;color:#fff;flex-wrap:wrap}
+header h1{font-size:17px;margin:0 8px 0 0;font-weight:700;letter-spacing:.2px}
+.modes,.file{display:flex;gap:6px;flex-wrap:wrap}.file{margin-left:auto}
+header .btn{background:#2c4f7c;color:#fff;border-color:#3f6797}
+header .btn:hover{background:#3a6296}
+header .btn.mode.on{background:#fff;color:#1f3a5f;border-color:#fff;font-weight:700}
+.btn{font:inherit;padding:5px 11px;border:1px solid #b9c3cf;border-radius:6px;background:#fff;color:#1c2833;cursor:pointer}
+.btn:hover:not(:disabled){background:#eaf0f7}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.pri{background:#1f6fd1;color:#fff;border-color:#1f6fd1}.btn.pri:hover{background:#1a5cb0}
+.btn.on{background:#d6e6fb;border-color:#1f6fd1;font-weight:600}
+#bar{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#fff;border-bottom:1px solid #d4dbe4;flex-wrap:wrap;min-height:46px}
+#bar .sp{flex:1}
+.inl{display:inline-flex;align-items:center;gap:4px;font-size:13px}.inl.dis{opacity:.45}
+select,input[type=text],input[type=number],textarea{font:inherit;padding:4px 6px;border:1px solid #b9c3cf;border-radius:5px;background:#fff;max-width:100%}
+#stage{position:relative;flex:1;overflow:auto;background:#fff;background-image:radial-gradient(#dfe5ec 1px,transparent 1px);background-size:20px 20px;min-height:320px}
+#canvas{display:block;user-select:none}
+.node{cursor:grab}.node.sel rect:first-of-type,.node.sel path:first-of-type{stroke:#1f6fd1;stroke-width:3.5}
+.pt{cursor:crosshair}
+#hint{padding:3px 14px;font-size:12px;color:#566573;background:#f6f8fa;border-top:1px solid #e1e6ec}
+.bottom{display:flex;gap:10px;padding:6px 14px 8px;background:#f6f8fa;height:112px}
+#frameWrap{flex:3;min-width:0}#logWrap{flex:2;min-width:0}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#7b8794;margin-bottom:3px}
+#frame{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;max-height:84px;overflow:auto}
+.ch{padding:2px 7px;border-radius:5px;font-size:12px;border:1px solid #d4dbe4;background:#eaf2f8;white-space:nowrap}
+#log{height:84px;overflow:auto;font-size:12px;color:#34495e;background:#fff;border:1px solid #e1e6ec;border-radius:5px;padding:3px 6px}
+.menu{position:fixed;z-index:50;background:#fff;border:1px solid #b9c3cf;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.18);min-width:220px;padding:4px 0}
+.mi{padding:5px 14px;cursor:pointer;font-size:13px}.mi:hover{background:#e8f1fd}.mi.dis{color:#aab;cursor:default}.sep{height:1px;background:#e1e6ec;margin:4px 0}
+#modals .dlgwrap:not(.free){position:fixed;inset:0;background:rgba(20,30,45,.35);display:flex;align-items:center;justify-content:center;z-index:60;padding:12px}
+.dlg{background:#fff;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);min-width:340px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.dlg.wide{min-width:560px}
+.dlg.free{position:fixed;z-index:61;min-width:320px}
+.dlgwrap.free{position:static}
+.dlg-t{padding:9px 14px;background:#1f3a5f;color:#fff;font-weight:600;cursor:default}.dlg.free .dlg-t{cursor:move}
+.dlg-b{display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;border-top:1px solid #e1e6ec;background:#f6f8fa}
+.form{padding:12px 14px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+.form label{display:flex;justify-content:space-between;align-items:center;gap:12px}.form label.chk{justify-content:flex-start}
+.form label input[type=text],.form label input[type=number],.form label select{width:210px}
+.form textarea{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.hint{font-size:12px;color:#6b7785}.err{color:#c0392b;font-size:13px;min-height:1em}
+.tbl{padding:10px 14px;overflow:auto}.tbl table{border-collapse:collapse;width:100%;margin:6px 0}
+.tbl th{background:#eef2f7;text-align:left;font-size:12px;padding:5px 7px;border:1px solid #d4dbe4}
+.tbl td{padding:2px 4px;border:1px solid #e1e6ec}.tbl td input[type=text],.tbl td select{width:100%;border-color:transparent;background:transparent}
+.tbl td input:not([readonly]):hover,.tbl td select:not(:disabled):hover{border-color:#b9c3cf;background:#fff}
+.tbl tr.sel td{background:#e8f1fd}.tbl td.empty{text-align:center;color:#99a;padding:10px}
+.tbl table.ro td{padding:3px 8px;font-size:13px}
+.opts{padding:8px 14px;overflow:auto}.opts h4{margin:12px 0 4px;color:#1f3a5f;border-bottom:1px solid #e1e6ec;padding-bottom:2px}
+.orow{display:flex;align-items:center;gap:8px;margin:3px 0}.orow span{flex:1;font-size:13px}.orow input[type=number],.orow select{width:120px}
+.rst{border:none;background:none;cursor:pointer;color:#1f6fd1;font-size:15px}
+#toasts{position:absolute;top:8px;right:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;z-index:20;max-width:420px}
+.toast{pointer-events:auto;background:#1f3a5f;color:#fff;padding:7px 12px;border-radius:7px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
+.toast.sticky{background:#b9770e}
+#demos{position:absolute;left:0;top:0;pointer-events:none}
+.demo{position:absolute;width:318px;background:#fffdf5;border:2px solid #e0a800;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:auto;z-index:30}
+.demo-t{background:#e0a800;color:#2b2100;font-weight:700;padding:4px 10px;border-radius:6px 6px 0 0}
+.demo-l{padding:6px 10px;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.st{padding:2px 6px;border-radius:4px;color:#566573}.st.cur{background:#fff3c4;color:#1c2833}.st.fin{font-weight:700}.st.ok{color:#1e8449}
+.demo-b{display:flex;gap:6px;padding:6px 10px 8px;justify-content:flex-end}.demo .hint{padding:0 10px}
+.choices{display:flex;flex-direction:column;gap:4px;padding:6px 10px}.btn.ch{text-align:left;font-size:12px;padding:4px 8px}
+.fb{margin:2px 10px 4px;padding:3px 8px;border-radius:4px;font-size:12px}.fb.ok{background:#d5f5e3;color:#1e8449}.fb.bad{background:#fadbd8;color:#a93226}
+[hidden]{display:none!important}</style>
+</head>
+<body>
+<div id="app"></div>
+<script>/* Moteur du simulateur réseau : modèle, Ethernet, ARP, IP, routage, NAT/PAT, filtrage */
+(function (root) {
+'use strict';
+
+const BC = 'FF:FF:FF:FF:FF:FF';
+const MAXSTEPS = 6000;
+
+const OPT_DEFAULTS = {
+  hubPorts: 4, hubCascade: 1, swPorts: 8, swCascade: 1, swQ: 1,
+  swSaf: false, swStp: false, swVlan: 0, thick: false,
+  listen: 150, tx: 700, shortCoef: 0.5, longCoef: 1.8, hubTurn: 80, swTurn: 120,
+  speed: 10, ifg: 120, demoWait: 1100, announce: false, slow: 40, macTtl: 20,
+  W: 1, X: 200, Y: 6, Z: 150,
+  showFrame: true, pathDefault: 'eth', arpTtl: 12, pingWait: 1200, ipTtl: 8,
+  internetDemo: true, autoArp: false, icons: true, routeOnlyDemo: false
+};
+
+const FAI = [
+  { name: 'FAI1', net: '80.10.0.0', mask: '255.255.0.0', gw: '80.10.0.1', ips: ['80.10.0.11', '80.10.0.12'] },
+  { name: 'FAI2', net: '90.20.0.0', mask: '255.255.0.0', gw: '90.20.0.1', ips: ['90.20.0.11', '90.20.0.12'] }
+];
+
+/* ---------- utilitaires adresses ---------- */
+function ip2int(s) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  const a = m.slice(1).map(Number);
+  if (a.some(x => x > 255)) return null;
+  return ((a[0] * 16777216) + (a[1] * 65536) + (a[2] * 256) + a[3]) >>> 0;
+}
+function int2ip(n) { return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'); }
+function bitsToMask(b) { return b === 0 ? 0 : (0xFFFFFFFF << (32 - b)) >>> 0; }
+function maskBits(mk) { let b = 0; while (b < 32 && (mk & (0x80000000 >>> b))) b++; return b; }
+function validMask(s) {
+  const v = ip2int(s); if (v === null) return false;
+  return bitsToMask(maskBits(v)) === v;
+}
+function classMask(ip) { const a = ip >>> 24; return a < 128 ? 0xFF000000 : a < 192 ? 0xFFFF0000 : 0xFFFFFF00; }
+function parseCidr(s) {
+  s = String(s || '').trim();
+  if (!s || s === '*') return { any: true };
+  const parts = s.split('/');
+  const ip = ip2int(parts[0]); if (ip === null) return null;
+  let bits;
+  if (parts.length > 1 && parts[1] !== '') {
+    bits = parseInt(parts[1], 10);
+    if (!(bits >= 0 && bits <= 32)) return null;
+  } else {
+    const cm = classMask(ip) >>> 0;
+    bits = ((ip & cm) >>> 0) === ip ? maskBits(cm) : 32;
+  }
+  return { ip, bits, mask: bitsToMask(bits) };
+}
+function cidrMatch(c, ipStr) {
+  if (!c || c.any) return true;
+  const ip = ip2int(ipStr); if (ip === null) return false;
+  return ((ip & c.mask) >>> 0) === ((c.ip & c.mask) >>> 0);
+}
+function inNet(ip, net, mask) {
+  const a = ip2int(ip), n = ip2int(net), m = ip2int(mask);
+  if (a === null || n === null || m === null) return false;
+  return ((a & m) >>> 0) === ((n & m) >>> 0);
+}
+function isPrivate(ip) {
+  const v = ip2int(ip); if (v === null) return false;
+  return (v >>> 24) === 10 || ((v >>> 20) === 0xAC1) || ((v >>> 16) === 0xC0A8);
+}
+
+/* ---------- modèle ---------- */
+function newModel() {
+  return { v: 1, nextId: 1, macSeq: 1, nodes: [], cables: [], options: Object.assign({}, OPT_DEFAULTS), traced: {} };
+}
+function uid(m) { return m.nextId++; }
+function hex2(n) { return ('0' + (n & 255).toString(16).toUpperCase()).slice(-2); }
+function newMac(m) { const n = m.macSeq++; return ['02', '00', '5E', '00', hex2(n >> 8), hex2(n)].join(':'); }
+function uniqueName(m, base) {
+  let i = 1; const names = m.nodes.map(n => n.name);
+  while (names.includes(base + i)) i++;
+  return base + i;
+}
+function addStation(m, x, y) {
+  const id = 's' + uid(m);
+  const n = {
+    id, type: 'station', name: uniqueName(m, 'PC'), x, y, on: true,
+    nics: [{ mac: newMac(m), ip: '', mask: '255.255.255.0' }], remote: false,
+    gateway: '', routing: false, routes: [], arp: [], hosts: [], listen: [], rules: [],
+    nat: { on: false, pub: 0 }, maps: [], natTable: [], exch: [], eph: 49152, xid: 1
+  };
+  m.nodes.push(n); return n;
+}
+function addHub(m, x, y) {
+  const o = m.options;
+  const n = { id: 'h' + uid(m), type: 'hub', name: uniqueName(m, 'Hub'), x, y, on: true, ports: o.hubPorts, cascade: o.hubCascade };
+  m.nodes.push(n); return n;
+}
+function addSwitch(m, x, y) {
+  const o = m.options;
+  const n = {
+    id: 'w' + uid(m), type: 'switch', name: uniqueName(m, 'Switch'), x, y, on: true,
+    ports: o.swPorts, cascade: o.swCascade, dot1q: o.swQ, mode: o.swSaf ? 'saf' : 'otf', stp: o.swStp, vlan: o.swVlan,
+    macTable: [], portVlan: {}, macVlan: {}, manualBlock: {}, stpBlock: {}
+  };
+  m.nodes.push(n); return n;
+}
+function addInternet(m, x, y) {
+  if (m.nodes.some(n => n.type === 'internet')) return null;
+  const n = { id: 'i' + uid(m), type: 'internet', name: 'Internet', x, y, on: true };
+  m.nodes.push(n); return n;
+}
+function nodeById(m, id) { return m.nodes.find(n => n.id === id); }
+
+function pointsOf(n) {
+  const a = []; const id = n.id;
+  if (n.type === 'station') {
+    n.nics.forEach((c, i) => a.push({ id: id + ':n' + i, node: id, kind: 'n', idx: i, num: i + 1, label: 'eth' + i }));
+    if (n.remote) a.push({ id: id + ':r0', node: id, kind: 'r', idx: 0, num: n.nics.length + 1, label: 'modem' });
+  } else if (n.type === 'hub' || n.type === 'switch') {
+    let k = 0;
+    for (let i = 0; i < n.ports; i++) a.push({ id: id + ':p' + i, node: id, kind: 'p', idx: i, num: ++k, label: String(k) });
+    for (let i = 0; i < n.cascade; i++) a.push({ id: id + ':c' + i, node: id, kind: 'c', idx: i, num: ++k, label: String(k) });
+    if (n.type === 'switch') for (let i = 0; i < (n.dot1q || 0); i++) a.push({ id: id + ':q' + i, node: id, kind: 'q', idx: i, num: ++k, label: String(k) });
+  } else if (n.type === 'internet') {
+    for (let i = 0; i < 4; i++) a.push({ id: id + ':f' + i, node: id, kind: 'f', idx: i, num: i + 1, label: 'FAI' + (i < 2 ? 1 : 2) + (i % 2 ? 'b' : 'a') });
+  }
+  return a;
+}
+function findPoint(m, ptId) {
+  const nid = String(ptId).split(':')[0];
+  const n = nodeById(m, nid); if (!n) return null;
+  return pointsOf(n).find(p => p.id === ptId) || null;
+}
+function cableAt(m, ptId) { return m.cables.find(c => c.a === ptId || c.b === ptId) || null; }
+function polarity(kind) { return (kind === 'n' || kind === 'c') ? 'A' : 'B'; }
+function cableValid(m, c) {
+  const a = findPoint(m, c.a), b = findPoint(m, c.b);
+  if (!a || !b) return false;
+  const tel = k => k === 'r' || k === 'f';
+  if (c.type === 'telecom') return (a.kind === 'r' && b.kind === 'f') || (a.kind === 'f' && b.kind === 'r');
+  if (tel(a.kind) || tel(b.kind)) return false;
+  const same = polarity(a.kind) === polarity(b.kind);
+  return c.type === 'croise' ? same : !same;
+}
+function peerOf(m, ptId) {
+  const c = cableAt(m, ptId); if (!c || !cableValid(m, c)) return null;
+  const o = c.a === ptId ? c.b : c.a;
+  const pt = findPoint(m, o); if (!pt) return null;
+  return { cable: c, pt };
+}
+function suggestCableType(m, a, b) {
+  const pa = findPoint(m, a), pb = findPoint(m, b);
+  if (!pa || !pb) return 'droit';
+  const tel = k => k === 'r' || k === 'f';
+  if (tel(pa.kind) || tel(pb.kind)) return 'telecom';
+  return polarity(pa.kind) === polarity(pb.kind) ? 'croise' : 'droit';
+}
+function isBlocked(sw, pt) { return !!(sw.manualBlock[pt.num] || sw.stpBlock[pt.num]); }
+function pointState(m, pt) {
+  const n = nodeById(m, pt.node);
+  if (!n.on) return 'off';
+  const c = cableAt(m, pt.id);
+  if (!c) return 'free';
+  if (!cableValid(m, c)) return 'error';
+  if (n.type === 'switch' && isBlocked(n, pt)) return 'blocked';
+  return 'ok';
+}
+
+/* ---------- interfaces IP d'une station ---------- */
+function faiOfPoint(m, ptId) {
+  const c = cableAt(m, ptId); if (!c || c.type !== 'telecom') return null;
+  const o = c.a === ptId ? c.b : c.a;
+  const p = findPoint(m, o); if (!p || p.kind !== 'f') return null;
+  const f = FAI[p.idx < 2 ? 0 : 1];
+  return { fai: f, ip: f.ips[p.idx % 2], access: p };
+}
+function ifaces(m, st) {
+  const a = st.nics.map((c, i) => ({ i, kind: 'n', ip: c.ip, mask: c.mask, mac: c.mac, pt: st.id + ':n' + i, label: 'eth' + i }));
+  if (st.remote) {
+    const fi = faiOfPoint(m, st.id + ':r0');
+    a.push({ i: st.nics.length, kind: 'r', ip: fi ? fi.ip : '', mask: fi ? fi.fai.mask : '', mac: null, pt: st.id + ':r0', label: 'modem', fai: fi ? fi.fai : null });
+  }
+  return a;
+}
+function routesOf(m, st) {
+  const fs = ifaces(m, st); const rs = [];
+  for (const f of fs) {
+    if (!f.ip || ip2int(f.ip) === null || !validMask(f.mask)) continue;
+    rs.push({ net: int2ip((ip2int(f.ip) & ip2int(f.mask)) >>> 0), mask: f.mask, gw: '', iface: f.i, src: 'directe' });
+  }
+  for (const r of st.routes) {
+    const f = fs.find(f => f.ip && inNet(r.gw, f.ip, f.mask));
+    if (f) rs.push({ net: r.net, mask: r.mask, gw: r.gw, iface: f.i, src: 'statique' });
+  }
+  if (st.gateway) {
+    const f = fs.find(f => f.ip && inNet(st.gateway, f.ip, f.mask));
+    if (f) rs.push({ net: '0.0.0.0', mask: '0.0.0.0', gw: st.gateway, iface: f.i, src: 'défaut' });
+  } else {
+    const f = fs.find(f => f.kind === 'r' && f.fai);
+    if (f) rs.push({ net: '0.0.0.0', mask: '0.0.0.0', gw: f.fai.gw, iface: f.i, src: 'défaut (FAI)' });
+  }
+  return rs;
+}
+function lookupRoute(m, st, dst) {
+  let best = null, bb = -1;
+  const rank = { 'directe': 3, 'statique': 2 };
+  for (const r of routesOf(m, st)) {
+    if (!inNet(dst, r.net, r.mask)) continue;
+    const b = maskBits(ip2int(r.mask));
+    if (b > bb || (b === bb && (rank[r.src] || 1) > (rank[best.src] || 1))) { best = r; bb = b; }
+  }
+  return best;
+}
+function resolveName(st, s) {
+  s = String(s || '').trim();
+  if (ip2int(s) !== null) return s;
+  const h = st.hosts.find(h => h.name.toLowerCase() === s.toLowerCase());
+  if (h) return h.ip;
+  if (st.name.toLowerCase() === s.toLowerCase()) { const c = st.nics.find(c => c.ip); return c ? c.ip : null; }
+  return null;
+}
+
+/* ---------- L2 : parcours, spanning tree, découverte ---------- */
+function l2reach(m, startPtId, opts) {
+  opts = opts || {};
+  const found = []; const seen = new Set([startPtId]);
+  const queue = [startPtId];
+  while (queue.length) {
+    const cur = queue.shift();
+    const peer = peerOf(m, cur); if (!peer) continue;
+    const q = peer.pt; if (seen.has(q.id)) continue; seen.add(q.id);
+    const n = nodeById(m, q.node);
+    if (n.type === 'station') { if (q.kind === 'n') found.push(q); continue; }
+    if ((n.type === 'hub' || n.type === 'switch') && n.on) {
+      if (n.type === 'switch' && isBlocked(n, q)) continue;
+      for (const p of pointsOf(n)) {
+        if (p.id === q.id || seen.has(p.id)) continue;
+        if (n.type === 'switch' && isBlocked(n, p)) continue;
+        seen.add(p.id); queue.push(p.id);
+      }
+    }
+  }
+  return found;
+}
+function l2path(m, fromPt, toPt) {
+  // BFS sur les points ; retourne la liste des câbles parcourus
+  const prev = new Map(); prev.set(fromPt, null);
+  const queue = [fromPt];
+  while (queue.length) {
+    const cur = queue.shift();
+    const peer = peerOf(m, cur); if (!peer) continue;
+    const q = peer.pt;
+    if (prev.has(q.id)) continue;
+    prev.set(q.id, { from: cur, cable: peer.cable });
+    if (q.id === toPt) break;
+    const n = nodeById(m, q.node);
+    if ((n.type === 'hub' || n.type === 'switch') && n.on) {
+      for (const p of pointsOf(n)) {
+        if (p.id === q.id || prev.has(p.id)) continue;
+        if (n.type === 'switch' && isBlocked(n, p)) continue;
+        prev.set(p.id, { from: q.id, cable: null }); queue.push(p.id);
+      }
+    }
+  }
+  if (!prev.has(toPt)) return null;
+  const path = []; let cur = toPt;
+  while (prev.get(cur)) {
+    const e = prev.get(cur);
+    if (e.cable) path.unshift({ cable: e.cable, from: e.from, to: cur });
+    cur = e.from;
+  }
+  return path;
+}
+function computeStp(m) {
+  const sws = m.nodes.filter(n => n.type === 'switch');
+  sws.forEach(s => { s.stpBlock = {}; });
+  const act = sws.filter(s => s.stp && s.on);
+  if (!act.length) return;
+  const root = act.slice().sort((a, b) => parseInt(a.id.slice(1)) - parseInt(b.id.slice(1)))[0];
+  const dev = n => (n.type === 'hub' || n.type === 'switch') && n.on;
+  const depth = new Map([[root.id, 0]]); const tree = new Set(); const queue = [root.id];
+  while (queue.length) {
+    const cur = nodeById(m, queue.shift());
+    for (const c of m.cables) {
+      if (!cableValid(m, c)) continue;
+      const pa = findPoint(m, c.a), pb = findPoint(m, c.b);
+      let me, other;
+      if (pa.node === cur.id) { me = pa; other = pb; } else if (pb.node === cur.id) { me = pb; other = pa; } else continue;
+      const on = nodeById(m, other.node);
+      if (!dev(on) || depth.has(on.id)) continue;
+      depth.set(on.id, depth.get(cur.id) + 1); tree.add(c.id); queue.push(on.id);
+    }
+  }
+  for (const c of m.cables) {
+    if (!cableValid(m, c) || tree.has(c.id)) continue;
+    const pa = findPoint(m, c.a), pb = findPoint(m, c.b);
+    const na = nodeById(m, pa.node), nb = nodeById(m, pb.node);
+    if (!dev(na) || !dev(nb) || !depth.has(na.id) || !depth.has(nb.id)) continue;
+    const cand = [[na, pa], [nb, pb]].filter(([n]) => n.type === 'switch' && n.stp)
+      .sort((x, y) => (depth.get(y[0].id) - depth.get(x[0].id)) || (parseInt(y[0].id.slice(1)) - parseInt(x[0].id.slice(1))));
+    if (cand.length) cand[0][0].stpBlock[cand[0][1].num] = true;
+  }
+}
+function discoverSwitch(m, sw) {
+  for (const p of pointsOf(sw)) {
+    if (isBlocked(sw, p)) continue;
+    for (const q of l2reach(m, p.id)) {
+      const st = nodeById(m, q.node); if (!st.on) continue;
+      const mac = st.nics[q.idx].mac;
+      const e = sw.macTable.find(e => e.mac === mac);
+      if (e) { e.port = p.num; e.ttl = m.options.macTtl; } else sw.macTable.push({ mac, port: p.num, ttl: m.options.macTtl });
+    }
+  }
+}
+function fillArp(m, opts) {
+  opts = opts || {};
+  for (const st of m.nodes.filter(n => n.type === 'station')) {
+    for (const f of ifaces(m, st)) {
+      if (f.kind !== 'n' || !f.ip) continue;
+      for (const q of l2reach(m, f.pt)) {
+        const o = nodeById(m, q.node); const oc = o.nics[q.idx];
+        if (o === st || !oc.ip || !inNet(oc.ip, f.ip, f.mask)) continue;
+        const e = st.arp.find(e => e.ip === oc.ip);
+        if (e) { e.mac = oc.mac; if (!e.static) e.ttl = m.options.arpTtl; if (opts.static) e.static = true; }
+        else st.arp.push({ ip: oc.ip, mac: oc.mac, static: !!opts.static, ttl: m.options.arpTtl });
+      }
+    }
+  }
+}
+function clone(m) { return JSON.parse(JSON.stringify(m, (k, v) => (k[0] === '_' ? undefined : v))); }
+
+/* ---------- simulation ---------- */
+function Sim(m, o) {
+  const opt = m.options;
+  const ev = []; const q = []; let seq = 0, steps = 0;
+  const st0 = { ok: null, pingDone: false, errors: 0 };
+  let rng = o.seed || 12345;
+  function rnd() { rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296; }
+
+  function at(t, fn) { q.push({ t, fn, s: seq++ }); }
+  function run() {
+    while (q.length) {
+      let bi = 0;
+      for (let i = 1; i < q.length; i++) if (q[i].t < q[bi].t || (q[i].t === q[bi].t && q[i].s < q[bi].s)) bi = i;
+      const e = q.splice(bi, 1)[0];
+      if (++steps > MAXSTEPS) { ev.push({ k: 'msg', t: e.t, node: null, text: 'Simulation interrompue : trop d\'événements (boucle dans le réseau ?)', sticky: true }); break; }
+      e.fn(e.t);
+    }
+  }
+  const msg = (nid, t, text, sticky) => ev.push({ k: 'msg', t, node: nid, text, sticky: !!sticky });
+  const demo = (n, t, title, inters, fin, extra) => {
+    if (!o.demos || m.traced[n.id] === false) return;
+    const pool = inters.concat([fin], extra || []);
+    ev.push({ k: 'demo', t, node: n.id, title, inters, fin, pool });
+  };
+  const txTime = f => opt.tx * (f.size === 'short' ? opt.shortCoef : f.size === 'long' ? opt.longCoef : 1);
+  const cableTime = c => (c.len || 10) * 60 / opt.speed;
+
+  /* --- émission d'une trame sur un point --- */
+  const busy = {};      // collisions câble : {cableId:[{from,start,end,xm}]}
+  function collide(xa, xb, t, where) {
+    if (xa.corrupt && xb.corrupt) return;
+    xa.corrupt = true; xb.corrupt = true;
+    ev.push({ k: 'collision', t, where });
+    [xa, xb].forEach(x => { if (x.origin) reactCollision(x, t); });
+  }
+  function reactCollision(x, t) {
+    if (x.reacted) return; x.reacted = true;
+    const org = x.origin;
+    if (org.attempt >= 10) { msg(nodeById(m, findPoint(m, org.pt).node).id, t, 'Abandon après 10 collisions.', true); return; }
+    const n = org.no || 1;
+    const k = org.attempt + 1;
+    const delay = (opt.W === 0 ? 1 : n * opt.W) * k * opt.X * (1 + Math.floor(rnd() * opt.Y)) + opt.Z;
+    const nx = { id: seq++, corrupt: false, origin: { pt: org.pt, frame: org.frame, attempt: k, no: n } };
+    ev.push({ k: 'retry', t: t + 150, pt: org.pt, attempt: k });
+    at(t + 150 + delay, tt => sendFrame(org.pt, org.frame, tt, nx));
+  }
+  function sendFrame(ptId, frame, t, xm) {
+    const peer = peerOf(m, ptId);
+    const pt = findPoint(m, ptId);
+    const node = nodeById(m, pt.node);
+    if (!peer) { ev.push({ k: 'lost', t, pt: ptId }); return; }
+    const c = peer.cable; const tr = cableTime(c); const d = o.real ? txTime(frame) : 0;
+    xm = xm || { id: seq++, corrupt: false };
+    let f = frame;
+    if (node.type === 'switch' && frame.vlan && pt.kind !== 'q') f = Object.assign({}, frame, { vlan: null });
+    ev.push({ k: 'seg', t, dur: tr, cable: c.id, from: ptId, to: peer.pt.id, frame: f, d, xm });
+    if (o.real && !o.full && (pt.kind === 'n' || node.type === 'switch')) {
+      const L = busy[c.id] || (busy[c.id] = []);
+      for (const b of L) {
+        if (b.from !== ptId && t < b.end + tr && b.start < t + d + tr) collide(xm, b.xm, Math.max(t, b.start) + tr / 2, c.id);
+      }
+      L.push({ from: ptId, start: t, end: t + d, xm });
+    }
+    at(t + tr, tt => recv(peer.pt, f, tt, xm));
+  }
+  function recv(pt, f, t, xm) {
+    const n = nodeById(m, pt.node);
+    ev.push({ k: 'arrive', t, pt: pt.id });
+    if (n.type === 'station') {
+      if (o.real) at(t + txTime(f), tt => { if (!xm.corrupt) stRecv(n, pt, f, tt); });
+      else stRecv(n, pt, f, t);
+    } else if (n.type === 'hub') hubRecv(n, pt, f, t, xm);
+    else if (n.type === 'switch') swRecv(n, pt, f, t, xm);
+    else if (n.type === 'internet') internetRecvTelecom(n, pt, f, t);
+  }
+
+  /* --- hub --- */
+  const hubSeen = {};
+  function hubRecv(h, pt, f, t, xm) {
+    if (!h.on) return;
+    const d = o.real ? txTime(f) : 0;
+    if (o.real) {
+      const L = hubSeen[h.id] || (hubSeen[h.id] = []);
+      for (const b of L) if (b.pt !== pt.id && t < b.end && b.start < t + d) collide(xm, b.xm, t, h.id);
+      L.push({ pt: pt.id, start: t, end: t + d, xm });
+    }
+    const outs = pointsOf(h).filter(p => p.id !== pt.id && peerOf(m, p.id));
+    demo(h, t, 'Hub ' + h.name, ['Réception d\'une trame sur le port ' + pt.num + '…'], 'Répétition de la trame sur tous les autres ports →',
+      ['Lecture de l\'adresse destinataire…', 'Émission sur le port de l\'adresse destinataire →']);
+    outs.forEach(p => at(t + opt.hubTurn, tt => sendFrame(p.id, f, tt, xm)));
+  }
+
+  /* --- switch --- */
+  const swBusy = {};
+  function vlanOfPort(sw, p) { return sw.portVlan[p.num] || 1; }
+  function swRecv(sw, pt, f, t, xm) {
+    if (!sw.on) return;
+    if (isBlocked(sw, pt)) {
+      demo(sw, t, 'Switch ' + sw.name, ['Réception sur le port ' + pt.num + '…'], 'Port bloqué (spanning tree) : trame ignorée →', ['Mise à jour de la table mac/port…']);
+      return;
+    }
+    const d = o.real ? txTime(f) : 0;
+    const fwdAt = o.real ? (sw.mode === 'saf' ? t + d : t + d * 0.2) : t;
+    const doFwd = tt => {
+      if (sw.mode === 'saf' && o.real && xm.corrupt) { ev.push({ k: 'drop', t: tt, pt: pt.id }); return; }
+      let vlan = null;
+      if (sw.vlan === 1) vlan = pt.kind === 'q' ? (f.vlan || 1) : vlanOfPort(sw, pt);
+      else if (sw.vlan === 2) vlan = pt.kind === 'q' ? (f.vlan || 1) : (sw.macVlan[f.src] || 1);
+      // apprentissage
+      sw.macTable.forEach(e => { e.ttl--; });
+      sw.macTable = sw.macTable.filter(e => e.ttl > 0 || e.mac === f.src);
+      const le = sw.macTable.find(e => e.mac === f.src);
+      if (le) { le.port = pt.num; le.ttl = opt.macTtl; } else sw.macTable.push({ mac: f.src, port: pt.num, ttl: opt.macTtl });
+      if (sw.vlan === 2 && pt.kind !== 'q') sw.portVlan[pt.num] = vlan;
+      const bc = f.dst === BC;
+      const known = bc ? null : sw.macTable.find(e => e.mac === f.dst);
+      const vlanOk = p => sw.vlan === 0 || p.kind === 'q' || vlanOfPort(sw, p) === vlan;
+      const cands = pointsOf(sw).filter(p => p.id !== pt.id && peerOf(m, p.id) && !isBlocked(sw, p));
+      let outs, fin;
+      if (known) {
+        if (known.port === pt.num) { outs = []; fin = 'Destinataire sur le port d\'arrivée : trame ignorée →'; }
+        else {
+          const p = cands.find(p => p.num === known.port);
+          if (p && vlanOk(p)) { outs = [p]; fin = 'Adresse destinataire connue (port ' + p.num + ') : émission sur ce port →'; }
+          else { outs = []; fin = 'Destinataire dans un autre vlan ou port inutilisable : trame ignorée →'; }
+        }
+      } else {
+        outs = cands.filter(vlanOk);
+        fin = bc ? 'Adresse de diffusion : émission sur tous les ports sauf celui d\'arrivée →' : 'Adresse destinataire inconnue : émission sur tous les ports sauf celui d\'arrivée →';
+      }
+      const inters = ['Lecture de l\'adresse source…', 'Mise à jour de la table mac/port…'];
+      if (sw.vlan) inters.push('Détermination du vlan de la trame (vlan ' + vlan + ')…');
+      inters.push('Lecture de l\'adresse destinataire…');
+      const all = ['Adresse de diffusion : émission sur tous les ports sauf celui d\'arrivée →', 'Adresse destinataire inconnue : émission sur tous les ports sauf celui d\'arrivée →',
+        'Destinataire sur le port d\'arrivée : trame ignorée →', 'Adresse destinataire connue (port N) : émission sur ce port →'];
+      demo(sw, tt, 'Switch ' + sw.name, inters, fin, all.filter(s => s !== fin && !s.includes('(port N)')));
+      let share = null;
+      outs.forEach(p => {
+        const out = Object.assign({}, f, { vlan: (sw.vlan && p.kind === 'q') ? vlan : null });
+        let ts = tt + opt.swTurn;
+        let x2 = (o.real && sw.mode !== 'saf') ? xm : { id: seq++, corrupt: false };
+        if (o.real) {
+          const key = sw.id + ':' + p.id; const b = swBusy[key] || 0;
+          if (b > ts) ts = b + opt.ifg;
+          swBusy[key] = ts + d;
+        }
+        at(ts, t3 => sendFrame(p.id, out, t3, x2));
+      });
+    };
+    at(fwdAt, doFwd);
+  }
+
+  /* --- station : couche Ethernet --- */
+  function stRecv(st, pt, f, t) {
+    if (!st.on) return;
+    const nic = st.nics[pt.idx];
+    const mine = f.dst === nic.mac, bc = f.dst === BC;
+    const fin = mine ? 'Adresse destinataire = ma carte : trame acceptée →' : bc ? 'Adresse de diffusion : trame acceptée →' : 'Adresse destinataire ≠ ma carte : trame ignorée →';
+    if (o.mode === 'eth') {
+      demo(st, t, 'Station ' + st.name, ['Lecture de l\'adresse destinataire…'], fin,
+        ['Adresse destinataire = ma carte : trame acceptée →', 'Adresse de diffusion : trame acceptée →', 'Adresse destinataire ≠ ma carte : trame ignorée →'].filter(s => s !== fin));
+      if ((mine || bc) && o.msgRecv) msg(st.id, t, 'Trame reçue par ' + st.name + '.');
+      if (mine || bc) ev.push({ k: 'flash', t, pt: pt.id });
+      return;
+    }
+    if (!(mine || bc)) return;
+    if (f.type === 'ARP') arpInput(st, pt.idx, f.payload, t);
+    else if (f.type === 'IP') ipInput(st, pt.idx, f.payload, t);
+  }
+  function stSend(st, nicIdx, frame, t) {
+    if (!st.on) { msg(st.id, t, st.name + ' est éteinte.', true); return; }
+    if (o.real) {
+      ev.push({ k: 'listen', t, node: st.id, dur: opt.listen });
+      t += opt.listen;
+    }
+    sendFrame(st.id + ':n' + nicIdx, frame, t, { id: seq++, corrupt: false, origin: o.real ? { pt: st.id + ':n' + nicIdx, frame, attempt: 0, no: frame.no || 1 } : null });
+  }
+
+  /* --- ARP --- */
+  function arpGet(st, ip) { return st.arp.find(e => e.ip === ip); }
+  function arpPut(st, ip, mac) {
+    const e = arpGet(st, ip);
+    if (e) { e.mac = mac; if (!e.static) e.ttl = opt.arpTtl; } else st.arp.push({ ip, mac, static: false, ttl: opt.arpTtl });
+  }
+  function arpAge(st) { st.arp.forEach(e => { if (!e.static) e.ttl--; }); st.arp = st.arp.filter(e => e.static || e.ttl > 0); }
+  const pending = [];
+  function frameOf(f, dst, type, payload) { return { src: f.mac, dst, type, payload, vlan: null, size: 'normal' }; }
+
+  function directDeliver(st, f, dstMacOrBc, frame, t, ipTarget) {
+    // « route IP » : le paquet saute de station en station sans traverser les hubs/switchs
+    let target = null;
+    for (const s2 of m.nodes.filter(n => n.type === 'station')) {
+      for (const c of s2.nics.map((c, i) => ({ c, i }))) {
+        if (s2 === st && c.i === f.i) continue;
+        const hit = dstMacOrBc === BC ? c.c.ip === ipTarget : c.c.mac === dstMacOrBc;
+        if (hit) { const path = l2path(m, f.pt, s2.id + ':n' + c.i); if (path) { target = { s2, i: c.i, path }; } }
+      }
+    }
+    if (!target) { ev.push({ k: 'lost', t, pt: f.pt }); return; }
+    let tt = t;
+    target.path.forEach(seg => {
+      const tr = cableTime(seg.cable);
+      ev.push({ k: 'seg', t: tt, dur: tr, cable: seg.cable.id, from: seg.from, to: seg.to, frame, d: 0, xm: { corrupt: false } });
+      tt += tr;
+    });
+    const pt = findPoint(m, target.s2.id + ':n' + target.i);
+    at(tt, t3 => stRecv(target.s2, pt, frame, t3));
+  }
+  function emit(st, f, dstMac, type, payload, t, ipTarget) {
+    const frame = frameOf(f, dstMac, type, payload);
+    if (o.pathMode === 'ip' && o.mode !== 'eth') directDeliver(st, f, dstMac, frame, t, ipTarget);
+    else stSend(st, f.i, frame, t);
+  }
+  function arpRequest(st, f, ip, t) {
+    emit(st, f, BC, 'ARP', { op: 'request', sip: f.ip, smac: f.mac, tip: ip, tmac: '?' }, t, ip);
+  }
+  function arpInput(st, idx, p, t) {
+    const f = ifaces(m, st)[idx];
+    const demoOn = o.arpDemo;
+    if (p.op === 'request') {
+      if (p.tip === f.ip) {
+        arpPut(st, p.sip, p.smac);
+        if (demoOn) demo(st, t, 'Station ' + st.name + ' (ARP)', ['Lecture de la requête ARP…', 'Mémorisation de l\'adresse IP/MAC de l\'émetteur…'], 'Mon adresse IP est demandée : envoi de la réponse ARP →', ['Requête ARP non destinée à cette station : ignorée →']);
+        emit(st, f, p.smac, 'ARP', { op: 'reply', sip: f.ip, smac: f.mac, tip: p.sip, tmac: p.smac }, t + 20, p.sip);
+      } else if (demoOn) demo(st, t, 'Station ' + st.name + ' (ARP)', ['Lecture de la requête ARP…'], 'Requête ARP non destinée à cette station : ignorée →', ['Mon adresse IP est demandée : envoi de la réponse ARP →']);
+    } else if (p.op === 'reply' && p.tip === f.ip) {
+      arpPut(st, p.sip, p.smac);
+      const todo = pending.filter(x => x.st === st && x.hop === p.sip);
+      if (demoOn) demo(st, t, 'Station ' + st.name + ' (ARP)', ['Lecture de la réponse ARP…', 'Mise à jour du cache ARP…'], todo.length ? 'Envoi du paquet IP en attente →' : 'Fin du traitement →', ['Envoi d\'une nouvelle requête ARP →']);
+      todo.forEach(x => { pending.splice(pending.indexOf(x), 1); emit(st, ifaces(m, st)[x.ifi], p.smac, 'IP', x.pkt, t + 20, p.sip); });
+    }
+  }
+
+  /* --- filtrage --- */
+  function filterOk(st, pkt, inIf, outIf) {
+    if (!st.rules.length) return true;
+    const fs = ifaces(m, st);
+    return st.rules.some(r => {
+      if (r.inIf !== '' && r.inIf !== undefined && r.inIf !== null) { if (inIf === null || Number(r.inIf) !== inIf) return false; }
+      if (r.outIf !== '' && r.outIf !== undefined && r.outIf !== null) { if (outIf === null || Number(r.outIf) !== outIf) return false; }
+      if (r.proto && r.proto !== '*' && r.proto !== pkt.proto) return false;
+      const sc = parseCidr(r.src), dc = parseCidr(r.dst);
+      if (!cidrMatch(sc, pkt.src) || !cidrMatch(dc, pkt.dst)) return false;
+      if (pkt.proto !== 'ICMP') {
+        if (r.sport !== '' && r.sport !== undefined && Number(r.sport) !== pkt.sport) return false;
+        if (r.dport !== '' && r.dport !== undefined && Number(r.dport) !== pkt.dport) return false;
+      }
+      return true;
+    });
+  }
+  const filterUsed = st => st.rules.length > 0;
+
+  /* --- NAT / PAT --- */
+  function snat(st, pkt, ifOut) {
+    const pubIp = ifaces(m, st)[ifOut].ip;
+    const idKey = pkt.proto === 'ICMP' ? 'id' : 'sport';
+    const mp = st.maps.find(x => x.proto === pkt.proto && x.ip === pkt.src && Number(x.port) === pkt[idKey]);
+    let note;
+    if (mp) { note = { from: pkt.src + ':' + pkt[idKey], to: pubIp + ':' + mp.pubPort }; pkt.src = pubIp; pkt[idKey] = Number(mp.pubPort); return note; }
+    let e = st.natTable.find(x => x.proto === pkt.proto && x.priv === pkt.src && x.privPort === pkt[idKey] && !x.mapping);
+    if (!e) {
+      let port = pkt[idKey];
+      const used = p => st.natTable.some(x => x.proto === pkt.proto && x.pubPort === p) || st.maps.some(x => x.proto === pkt.proto && Number(x.pubPort) === p);
+      if (used(port)) { port = 40000; while (used(port)) port++; }
+      e = { proto: pkt.proto, priv: pkt.src, privPort: pkt[idKey], pubPort: port };
+      st.natTable.push(e);
+    }
+    note = { from: pkt.src + ':' + pkt[idKey], to: pubIp + ':' + e.pubPort };
+    pkt.src = pubIp; pkt[idKey] = e.pubPort;
+    return note;
+  }
+  function dnat(st, pkt) {
+    const idKey = pkt.proto === 'ICMP' ? 'id' : 'dport';
+    const key = pkt.proto === 'ICMP' ? pkt.id : pkt.dport;
+    const dyn = st.natTable.find(x => x.proto === pkt.proto && x.pubPort === key);
+    if (dyn) { const note = { from: pkt.dst + ':' + key, to: dyn.priv + ':' + dyn.privPort }; pkt.dst = dyn.priv; pkt[idKey] = dyn.privPort; return note; }
+    const mp = st.maps.find(x => x.proto === pkt.proto && Number(x.pubPort) === key);
+    if (mp && pkt.proto !== 'ICMP') { const note = { from: pkt.dst + ':' + key, to: mp.ip + ':' + mp.port }; pkt.dst = mp.ip; pkt.dport = Number(mp.port); return note; }
+    return null;
+  }
+
+  /* --- IP --- */
+  function newPkt(st, dst, extra) { return Object.assign({ src: '', dst, ttl: opt.ipTtl, proto: 'ICMP', auto: false }, extra); }
+
+  function transmitIf(st, fi, hop, pkt, t) {
+    arpAge(st);
+    if (fi.kind === 'r') { remoteSend(st, fi, pkt, t); return; }
+    if (o.pathMode === 'ip' && o.mode !== 'eth' && o.autoArp) {
+      // caches pré-remplis : adresse MAC connue sans échange ARP
+      const e = arpGet(st, hop);
+      if (!e) { const tgt = lookupMacByIp(st, fi, hop); if (tgt) arpPut(st, hop, tgt); }
+    }
+    const e = arpGet(st, hop);
+    if (e) { emit(st, fi, e.mac, 'IP', pkt, t, hop); return; }
+    pending.push({ st, hop, pkt, ifi: fi.i });
+    arpRequest(st, fi, hop, t);
+    ev.push({ k: 'note', t, node: st.id, text: 'ARP : qui possède ' + hop + ' ?' });
+  }
+  function lookupMacByIp(st, fi, ip) {
+    for (const q of l2reach(m, fi.pt)) { const c = nodeById(m, q.node).nics[q.idx]; if (c.ip === ip) return c.mac; }
+    return null;
+  }
+  function ipOutput(st, pkt, t, inIf) {
+    const r = lookupRoute(m, st, pkt.dst);
+    if (!r) {
+      demo(st, t, 'Station ' + st.name + ' (IP)', ['Lecture de l\'adresse IP destinataire…', 'Recherche dans la table de routage…'], 'Aucune route : paquet détruit →', ['Route trouvée : émission du paquet →']);
+      msg(st.id, t, st.name + ' : réseau inaccessible (' + pkt.dst + ').', true);
+      st0.errors++; return false;
+    }
+    const fi = ifaces(m, st)[r.iface];
+    if (!pkt.src) pkt.src = fi.ip;
+    if (inIf === null || inIf === undefined) {
+      if (!filterOk(st, pkt, null, fi.i)) { demo(st, t, 'Station ' + st.name + ' (filtrage)', ['Recherche d\'une règle de filtrage applicable…'], 'Aucune règle ne s\'applique : paquet bloqué →', []); msg(st.id, t, st.name + ' : émission bloquée par le filtrage.', true); st0.errors++; return false; }
+    }
+    transmitIf(st, fi, r.gw || pkt.dst, pkt, t);
+    return true;
+  }
+  function ipInput(st, ifIdx, pkt, t) {
+    pkt = Object.assign({}, pkt);
+    const fs = ifaces(m, st);
+    const myIps = fs.map(f => f.ip).filter(Boolean);
+    let note = null;
+    if (st.nat.on && ifIdx === st.nat.pub && pkt.dst === fs[ifIdx].ip) {
+      const n2 = dnat(st, pkt); if (n2) note = n2;
+    }
+    const toMe = myIps.includes(pkt.dst);
+    if (toMe) {
+      if (!filterOk(st, pkt, ifIdx, null)) {
+        demo(st, t, 'Station ' + st.name + ' (filtrage)', ['Recherche d\'une règle de filtrage applicable…'], 'Aucune règle ne s\'applique : paquet bloqué →', []);
+        msg(st.id, t, st.name + ' : paquet de ' + pkt.src + ' bloqué par le filtrage.', true); st0.errors++; return;
+      }
+      deliverLocal(st, ifIdx, pkt, t); return;
+    }
+    if (!(st.routing && fs.length > 1)) {
+      demo(st, t, 'Station ' + st.name + ' (IP)', ['Lecture de l\'adresse IP destinataire…'], 'Adresse ≠ la mienne et pas de routage : paquet ignoré →', ['Recherche dans la table de routage…']);
+      return;
+    }
+    const inters = ['Lecture de l\'adresse IP destinataire…', 'Décrémentation du TTL…'];
+    pkt.ttl--;
+    if (pkt.ttl <= 0) {
+      demo(st, t, 'Routeur ' + st.name, inters, 'TTL = 0 : paquet détruit, envoi d\'un message ICMP « TTL expiré » →', ['Recherche dans la table de routage…']);
+      icmpError(st, ifIdx, pkt, 'ttl-exceeded', t); return;
+    }
+    inters.push('Recherche dans la table de routage…');
+    const r = lookupRoute(m, st, pkt.dst);
+    if (!r) {
+      demo(st, t, 'Routeur ' + st.name, inters, 'Aucune route : paquet détruit, envoi d\'un message ICMP « destination inaccessible » →', ['TTL = 0 : paquet détruit, envoi d\'un message ICMP « TTL expiré » →']);
+      icmpError(st, ifIdx, pkt, 'unreach', t); return;
+    }
+    if (filterUsed(st)) inters.push('Application des règles de filtrage…');
+    if (!filterOk(st, pkt, ifIdx, r.iface)) {
+      demo(st, t, 'Routeur ' + st.name, inters, 'Aucune règle ne s\'applique : paquet bloqué →', ['Route trouvée : émission du paquet →']);
+      msg(st.id, t, st.name + ' : paquet ' + pkt.src + ' → ' + pkt.dst + ' bloqué par le filtrage.', true); st0.errors++; return;
+    }
+    if (st.nat.on && r.iface === st.nat.pub && ifIdx !== st.nat.pub) { inters.push('Translation d\'adresse et de port (NAT/PAT)…'); note = snat(st, pkt, r.iface); }
+    else if (note) inters.push('Translation inverse (NAT/PAT)…');
+    const fi = fs[r.iface];
+    const fin = fi.kind === 'r' ? 'Envoi du paquet vers Internet →' : (arpGet(st, r.gw || pkt.dst) || (o.pathMode === 'ip' && o.autoArp)) ? 'Route trouvée : émission du paquet →' : 'Adresse MAC inconnue : envoi d\'une requête ARP →';
+    const routeOnly = !note && !filterUsed(st);
+    if (!routeOnly || opt.routeOnlyDemo || o.mode === 'ip') demo(st, t, 'Routeur ' + st.name, inters, fin, ['TTL = 0 : paquet détruit, envoi d\'un message ICMP « TTL expiré » →', 'Aucune route : paquet détruit →']);
+    if (note) ev.push({ k: 'note', t, node: st.id, text: 'NAT : ' + note.from + ' → ' + note.to });
+    transmitIf(st, fi, r.gw || pkt.dst, pkt, t + 30);
+  }
+  function icmpError(st, ifIdx, orig, type, t) {
+    const fs = ifaces(m, st);
+    const reply = newPkt(st, orig.src, { src: fs[ifIdx].ip, icmpType: type, id: orig.id || 0, proto: 'ICMP', auto: orig.auto, orig: { proto: orig.proto, dst: orig.dst } });
+    ipOutput(st, reply, t + 30, ifIdx);
+  }
+  const nextXid = st => st.xid++;
+  function deliverLocal(st, ifIdx, pkt, t) {
+    const idv = pkt.proto === 'ICMP' ? pkt.id : pkt.sport;
+    if (pkt.proto === 'ICMP' && pkt.icmpType === 'echo') {
+      if (pkt.auto) {
+        demo(st, t, 'Station ' + st.name + ' (IP)', ['Lecture de l\'adresse IP destinataire…'], 'Adresse = la mienne : préparation de la réponse au ping →', ['Paquet destiné à un autre hôte : routage →']);
+        const r = newPkt(st, pkt.src, { src: pkt.dst, proto: 'ICMP', icmpType: 'echo-reply', id: pkt.id, auto: true });
+        ipOutput(st, r, t + 40, ifIdx);
+      } else {
+        st.exch.push({ id: nextXid(st), dir: 'in', proto: 'ICMP', ip: pkt.src, port: pkt.id, lport: pkt.id, state: 'reçue' });
+        msg(st.id, t, st.name + ' a reçu une requête ICMP de ' + pkt.src + '.', true);
+        ev.push({ k: 'flash', t, pt: st.id + ':n' + Math.min(ifIdx, st.nics.length - 1) });
+      }
+      return;
+    }
+    if (pkt.proto === 'ICMP' && pkt.icmpType === 'echo-reply') {
+      if (pkt.auto) { st0.ok = true; st0.pingDone = true; msg(st.id, t, 'Ping réussi : réponse de ' + pkt.src + '.', true); }
+      else {
+        const e = st.exch.find(x => x.dir === 'out' && x.proto === 'ICMP' && x.lport === pkt.id && x.ip === pkt.src);
+        if (e) e.state = 'répondue';
+        msg(st.id, t, st.name + ' a reçu la réponse ICMP de ' + pkt.src + '.', true);
+      }
+      return;
+    }
+    if (pkt.proto === 'ICMP') {
+      const txt = pkt.icmpType === 'ttl-exceeded' ? 'TTL expiré' : 'destination inaccessible';
+      msg(st.id, t, st.name + ' : message ICMP « ' + txt + ' » reçu de ' + pkt.src + '.', true);
+      if (pkt.auto) { st0.pingDone = true; st0.ok = false; }
+      return;
+    }
+    if (pkt.reply) {
+      const e = st.exch.find(x => x.dir === 'out' && x.proto === pkt.proto && x.lport === pkt.dport && x.ip === pkt.src && x.port === pkt.sport);
+      if (e) e.state = 'répondue';
+      msg(st.id, t, st.name + ' a reçu la réponse ' + pkt.proto + ' de ' + pkt.src + ':' + pkt.sport + '.', true);
+      return;
+    }
+    const l = st.listen.find(x => x.proto === pkt.proto && Number(x.port) === pkt.dport);
+    if (l) {
+      st.exch.push({ id: nextXid(st), dir: 'in', proto: pkt.proto, ip: pkt.src, port: pkt.sport, lport: pkt.dport, state: 'reçue' });
+      msg(st.id, t, st.name + ' : requête ' + pkt.proto + ' reçue de ' + pkt.src + ':' + pkt.sport + ' sur le port ' + pkt.dport + '.', true);
+    } else {
+      msg(st.id, t, st.name + ' : le port ' + pkt.proto + '/' + pkt.dport + ' n\'est pas écouté, requête refusée.', true);
+      st0.errors++;
+    }
+  }
+
+  /* --- Internet (méga-routeur) et lignes télécom --- */
+  function remoteSend(st, fi, pkt, t) {
+    const peer = peerOf(m, fi.pt);
+    if (!peer) { msg(st.id, t, st.name + ' : carte d\'accès distant non connectée.', true); return; }
+    const tr = cableTime(peer.cable);
+    ev.push({ k: 'seg', t, dur: tr, cable: peer.cable.id, from: fi.pt, to: peer.pt.id, frame: { src: fi.ip, dst: 'FAI', type: 'IP', payload: pkt, vlan: null, size: 'normal' }, d: 0, xm: { corrupt: false } });
+    at(t + tr, tt => internetRoute(nodeById(m, peer.pt.node), peer.pt, pkt, tt));
+  }
+  function internetRecvTelecom() { /* géré par remoteSend */ }
+  function internetRoute(net, inPt, pkt, t) {
+    pkt = Object.assign({}, pkt);
+    const inters = ['Lecture de l\'adresse IP destinataire…', 'Décrémentation du TTL…', 'Consultation de la table de routage consolidée…'];
+    const showDemo = opt.internetDemo && o.mode !== undefined;
+    pkt.ttl--;
+    const target = m.nodes.find(n => n.type === 'station' && n.remote && ifaces(m, n).some(f => f.kind === 'r' && f.ip === pkt.dst));
+    let fin;
+    if (pkt.ttl <= 0) fin = 'TTL = 0 : paquet détruit →';
+    else if (isPrivate(pkt.dst)) fin = 'Adresse privée non routable : paquet détruit →';
+    else if (!target) fin = 'Destination inconnue : paquet détruit →';
+    else fin = 'Route trouvée : transmission au fournisseur d\'accès du destinataire →';
+    if (showDemo) demo(net, t, 'Internet', inters, fin, ['Route trouvée : transmission au fournisseur d\'accès du destinataire →', 'Destination inconnue : paquet détruit →'].filter(s => s !== fin));
+    if (!target || pkt.ttl <= 0) {
+      msg(net.id, t, 'Internet : ' + (isPrivate(pkt.dst) ? 'adresse privée non routable' : pkt.ttl <= 0 ? 'TTL expiré' : 'destination inconnue') + ' (' + pkt.dst + ').', true);
+      st0.errors++;
+      return;
+    }
+    const fi = ifaces(m, target).find(f => f.kind === 'r');
+    const peer = peerOf(m, fi.pt); if (!peer) return;
+    const tr = cableTime(peer.cable);
+    ev.push({ k: 'seg', t: t + 80, dur: tr, cable: peer.cable.id, from: peer.pt.id, to: fi.pt, frame: { src: 'FAI', dst: fi.ip, type: 'IP', payload: pkt, vlan: null, size: 'normal' }, d: 0, xm: { corrupt: false } });
+    at(t + 80 + tr, tt => ipInput(target, fi.i, pkt, tt));
+  }
+
+  /* --- API de lancement --- */
+  const api = {};
+  api.eth = function (p) {
+    // p : {from, dst, size, no}
+    const pt = findPoint(m, p.from); const st = nodeById(m, pt.node);
+    const frame = { src: st.nics[pt.idx].mac, dst: p.dst, type: 'ETH', payload: { data: 'données' }, vlan: null, size: p.size || 'normal', no: p.no || 1 };
+    stSend(st, pt.idx, frame, p.t0 || 0);
+  };
+  api.ping = function (p) {
+    const st = nodeById(m, p.node);
+    const dst = resolveName(st, p.target);
+    const fs = ifaces(m, st);
+    if (!st.on) { msg(st.id, 0, st.name + ' est éteinte.', true); return; }
+    if (!dst) { msg(st.id, 0, 'Nom ou adresse « ' + p.target + ' » introuvable (fichier hosts).', true); st0.ok = false; return; }
+    const hasIp = fs.some(f => f.ip);
+    if (!hasIp) { msg(st.id, 0, st.name + ' n\'a aucune adresse IP configurée.', true); st0.ok = false; return; }
+    const pkt = newPkt(st, dst, { proto: 'ICMP', icmpType: 'echo', id: 1, auto: true });
+    const r = lookupRoute(m, st, dst);
+    const inters = ['Résolution du nom (fichier hosts)…', 'Création du paquet IP (ICMP echo request)…', 'Recherche dans la table de routage…'];
+    if (r) {
+      const fi = fs[r.iface];
+      const hop = r.gw || dst;
+      const known = fi.kind === 'r' || arpGet(st, hop) || (o.pathMode === 'ip' && o.autoArp);
+      inters.push('Recherche de l\'adresse MAC dans le cache ARP…');
+      demo(st, 0, 'Station ' + st.name + ' (ping)', inters, known ? 'Adresse connue : émission du paquet →' : 'Adresse MAC inconnue : envoi d\'une requête ARP →', [known ? 'Adresse MAC inconnue : envoi d\'une requête ARP →' : 'Adresse connue : émission du paquet →']);
+    } else demo(st, 0, 'Station ' + st.name + ' (ping)', inters, 'Aucune route : paquet détruit →', ['Adresse connue : émission du paquet →']);
+    ipOutput(st, pkt, 10, null);
+    st0.sentTarget = dst;
+  };
+  api.request = function (p) {
+    const st = nodeById(m, p.node);
+    if (!st.on) { msg(st.id, 0, st.name + ' est éteinte.', true); return; }
+    const dst = resolveName(st, p.target);
+    if (!dst) { msg(st.id, 0, 'Nom ou adresse « ' + p.target + ' » introuvable (fichier hosts).', true); return; }
+    const proto = p.proto;
+    let pkt;
+    const rt = lookupRoute(m, st, dst);
+    if (!rt) { msg(st.id, 0, st.name + ' : réseau inaccessible (' + dst + ').', true); return; }
+    const fi = ifaces(m, st)[rt.iface];
+    if (proto === 'ICMP') {
+      pkt = newPkt(st, dst, { src: fi.ip, proto: 'ICMP', icmpType: 'echo', id: Number(p.port) || 1, auto: false });
+      st.exch.push({ id: nextXid(st), dir: 'out', proto, ip: dst, port: pkt.id, lport: pkt.id, state: 'envoyée' });
+    } else {
+      const sport = st.eph++;
+      pkt = newPkt(st, dst, { src: fi.ip, proto, sport, dport: Number(p.port), auto: false });
+      st.exch.push({ id: nextXid(st), dir: 'out', proto, ip: dst, port: Number(p.port), lport: sport, state: 'envoyée' });
+    }
+    demo(st, 0, 'Station ' + st.name + ' (requête ' + proto + ')', ['Création du paquet ' + proto + '…', 'Recherche dans la table de routage…'], 'Émission du paquet →', []);
+    ipOutput(st, pkt, 10, null);
+  };
+  api.reply = function (p) {
+    const st = nodeById(m, p.node);
+    const e = st.exch.find(x => x.id === p.exch);
+    if (!e || e.dir !== 'in') return;
+    const rt = lookupRoute(m, st, e.ip);
+    if (!rt) { msg(st.id, 0, st.name + ' : réseau inaccessible (' + e.ip + ').', true); return; }
+    const fi = ifaces(m, st)[rt.iface];
+    let pkt;
+    if (e.proto === 'ICMP') pkt = newPkt(st, e.ip, { src: fi.ip, proto: 'ICMP', icmpType: 'echo-reply', id: e.port, auto: false });
+    else pkt = newPkt(st, e.ip, { src: fi.ip, proto: e.proto, sport: e.lport, dport: e.port, reply: true, auto: false });
+    e.state = 'répondue';
+    ipOutput(st, pkt, 10, null);
+  };
+  api.finish = function () {
+    run();
+    let tEnd = 0; ev.forEach(e => { tEnd = Math.max(tEnd, e.t + (e.dur || 0)); });
+    if (o.kind === 'ping' && !st0.pingDone && st0.errors === 0) {
+      msg(null, tEnd + opt.pingWait, 'Échec du ping : pas de réponse de ' + st0.sentTarget + '.', true);
+      st0.ok = false;
+    }
+    ev.sort((a, b) => a.t - b.t);
+    return { events: ev, ok: st0.ok, errors: st0.errors };
+  };
+  return { api, run, ev, at, sendFrame, msg, st0 };
+}
+
+function simulate(m, p) {
+  computeStp(m);
+  const o = Object.assign({ demos: true, pathMode: m.options.pathDefault, arpDemo: false, autoArp: m.options.autoArp, msgRecv: false, real: false, full: false }, p);
+  o.mode = p.kind === 'eth' ? 'eth' : (p.kind === 'ping' ? 'ip' : 'tr');
+  if (o.kind === 'ping') o.mode = 'ip';
+  if (p.mode) o.mode = p.mode;
+  if (o.mode === 'tr') { o.autoArp = true; }
+  if (o.mode === 'tr' || (o.mode === 'ip' && o.autoArp)) fillArp(m, { static: p.staticArp });
+  const S = Sim(m, o);
+  if (p.kind === 'eth') {
+    (p.frames || [p]).forEach((f, i) => S.api.eth(Object.assign({}, f, { no: i + 1 })));
+  } else if (p.kind === 'ping') S.api.ping(p);
+  else if (p.kind === 'req') S.api.request(p);
+  else if (p.kind === 'reply') S.api.reply(p);
+  return S.api.finish();
+}
+
+const Engine = {
+  BC, FAI, OPT_DEFAULTS, ip2int, int2ip, validMask, parseCidr, cidrMatch, inNet, isPrivate, maskBits, bitsToMask,
+  newModel, addStation, addHub, addSwitch, addInternet, nodeById, pointsOf, findPoint, cableAt, cableValid, peerOf,
+  suggestCableType, pointState, ifaces, routesOf, lookupRoute, resolveName, computeStp, discoverSwitch, fillArp,
+  l2reach, l2path, clone, simulate, isBlocked, uid, newMac, faiOfPoint
+};
+if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
+root.Engine = Engine;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Interface du simulateur réseau */
+(function () {
+'use strict';
+const E = window.Engine;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const $ = (s, r) => (r || document).querySelector(s);
+
+/* ---------- helpers DOM ---------- */
+function el(tag, attrs, kids) {
+  const e = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    const v = attrs[k];
+    if (k === 'class') e.className = v;
+    else if (k === 'style') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  (Array.isArray(kids) ? kids : kids == null ? [] : [kids]).forEach(c => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+  return e;
+}
+function sv(tag, attrs, kids) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in (attrs || {})) { const v = attrs[k]; if (v != null && v !== false) e.setAttribute(k, v); }
+  (Array.isArray(kids) ? kids : kids == null ? [] : [kids]).forEach(c => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+  return e;
+}
+
+/* ---------- état ---------- */
+let M = E.newModel();
+let mode = 'design';       // design | eth | ip | tr
+let tool = 'select';
+let sel = new Set();
+let cableFrom = null;
+let mouse = { x: 0, y: 0 };
+let drag = null;
+let player = null, raf = 0;
+let lastParams = null, snapshot = null;
+const SIM = { ethType: 'auto', ipType: 'auto', slow: false, msgRecv: true, full: false, demoTx: true, arpDemo: true, pathMode: 'eth', staticArp: false };
+const COL = { free: '#f39c12', ok: '#2ecc71', error: '#e74c3c', blocked: '#f48fb1', off: '#c8ccd0' };
+let pointFlash = {}; // ptId -> expire T
+let collisionSeen = false;
+
+const OPT_SCHEMA = [
+  ['Conception / divers', [
+    ['hubPorts', 'Ports par défaut d\'un hub', 'num', 1, 24], ['hubCascade', 'Ports de cascade d\'un hub', 'num', 0, 8],
+    ['swPorts', 'Ports par défaut d\'un switch', 'num', 1, 24], ['swCascade', 'Ports de cascade d\'un switch', 'num', 0, 8], ['swQ', 'Ports 802.1q d\'un switch', 'num', 0, 8],
+    ['swSaf', 'Switchs store and forward par défaut', 'bool'], ['swStp', 'Spanning tree par défaut', 'bool'], ['swVlan', 'Niveau vlan d\'un switch', 'sel', [[0, 'Aucun'], [1, 'Niveau 1 (ports)'], [2, 'Niveau 2 (adresses MAC)']]],
+    ['thick', 'Utiliser des traits épais', 'bool']]],
+  ['Ethernet', [
+    ['listen', 'Écoute avant émission (ms)', 'num', 0, 5000], ['tx', 'Temps émission trame (ms)', 'num', 50, 10000], ['shortCoef', 'Coefficient trame courte', 'float'], ['longCoef', 'Coefficient trame longue', 'float'],
+    ['hubTurn', 'Temps retournement hub (ms)', 'num', 0, 2000], ['swTurn', 'Temps retournement switch (ms)', 'num', 0, 2000], ['speed', 'Vitesse des trames', 'num', 1, 100], ['ifg', 'Temps inter trames (ms)', 'num', 0, 2000],
+    ['demoWait', 'Attente lors des démos (ms)', 'num', 100, 5000], ['announce', 'Les stations s\'annoncent', 'bool'], ['slow', 'Vitesse ralenti (%)', 'num', 5, 100], ['macTtl', 'TTL table mac/port', 'num', 2, 500],
+    ['W', 'Délai réémission : W', 'num', 0, 100], ['X', 'Délai réémission : X (ms)', 'num', 1, 5000], ['Y', 'Délai réémission : Y', 'num', 1, 100], ['Z', 'Délai réémission : Z (ms)', 'num', 0, 5000]]],
+  ['IP / Transport', [
+    ['showFrame', 'Montrer la trame', 'bool'], ['pathDefault', 'Trajet par défaut des paquets', 'sel', [['eth', 'Chemin Ethernet'], ['ip', 'Route IP']]],
+    ['arpTtl', 'TTL cache ARP (paquets émis)', 'num', 1, 500], ['pingWait', 'Attente ping si échec (ms)', 'num', 0, 10000], ['ipTtl', 'TTL paquet IP', 'num', 1, 64],
+    ['internetDemo', 'Démos du composant Internet', 'bool'], ['autoArp', 'Caches ARP automatiques en mode IP', 'bool'], ['icons', 'Afficher les icônes sur les stations', 'bool'], ['routeOnlyDemo', 'Démo si routage seul', 'bool']]]
+];
+
+/* ---------- géométrie ---------- */
+function nodeBox(n) {
+  if (n.type === 'station') return { w: 104, h: 58 };
+  if (n.type === 'internet') return { w: 190, h: 76 };
+  const k = n.ports + n.cascade + (n.dot1q || 0);
+  return { w: Math.max(n.type === 'hub' ? 150 : 170, k * 22 + 24), h: 34 };
+}
+function edgeOf(n, pt) {
+  const c = E.cableAt(M, pt.id);
+  if (!c) return pt.kind === 'r' ? 'top' : 'bottom';
+  const o = ptById(c.a === pt.id ? c.b : c.a); const on = o && E.nodeById(M, o.node);
+  if (!on) return 'bottom';
+  return on.y < n.y - 8 ? 'top' : 'bottom';
+}
+function ptGeom(pt) {
+  const n = E.nodeById(M, pt.node); const b = nodeBox(n);
+  const edge = edgeOf(n, pt); const y = edge === 'top' ? n.y - b.h / 2 : n.y + b.h / 2;
+  if (n.type === 'station') {
+    const pts = E.pointsOf(n).filter(q => edgeOf(n, q) === edge);
+    const i = pts.findIndex(q => q.id === pt.id);
+    return { x: n.x - b.w / 2 + b.w * (i + 1) / (pts.length + 1), y, edge };
+  }
+  if (n.type === 'internet') return { x: n.x - b.w / 2 + b.w * (pt.idx + 1) / 5, y, edge };
+  const i = E.pointsOf(n).findIndex(p => p.id === pt.id);
+  return { x: n.x - b.w / 2 + 16 + 22 * i, y, edge };
+}
+function ptPos(pt) { const g = ptGeom(pt); return { x: g.x, y: g.y }; }
+const ptById = id => E.findPoint(M, id);
+const nodeName = id => { const n = E.nodeById(M, id); return n ? n.name : ''; };
+
+/* ---------- persistance ---------- */
+let saveT = 0;
+function persist() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => { try { localStorage.setItem('simres.model', JSON.stringify(M)); } catch (e) { /* ignoré */ } }, 300);
+}
+function loadModelObj(o) {
+  const m = E.newModel();
+  Object.assign(m, o); m.options = Object.assign({}, E.OPT_DEFAULTS, o.options || {}); m.traced = o.traced || {};
+  m.nodes.forEach(n => { if (n.type === 'switch') { n.stpBlock = {}; n.manualBlock = n.manualBlock || {}; } });
+  M = m; sel.clear(); cableFrom = null; stopPlayback(); render();
+}
+
+/* ---------- rendu ---------- */
+const svg = sv('svg', { id: 'canvas', width: 1500, height: 900, viewBox: '0 0 1500 900' });
+const gCables = sv('g'), gNodes = sv('g'), gOver = sv('g', { 'pointer-events': 'none' }), gSel = sv('g', { 'pointer-events': 'none' });
+svg.append(gCables, gNodes, gSel, gOver);
+
+function render() {
+  gCables.textContent = ''; gNodes.textContent = '';
+  for (const c of M.cables) {
+    const a = ptById(c.a), b = ptById(c.b); if (!a || !b) continue;
+    const pa = ptPos(a), pb = ptPos(b);
+    const valid = E.cableValid(M, c);
+    const w = M.options.thick ? 3 : 2;
+    const col = c.type === 'telecom' ? '#8e44ad' : c.type === 'croise' ? '#d35400' : '#34495e';
+    const path = c.type === 'telecom' ? `M${pa.x},${pa.y} L${(pa.x + pb.x) / 2 + 12},${(pa.y + pb.y) / 2 - 10} L${(pa.x + pb.x) / 2 - 12},${(pa.y + pb.y) / 2 + 10} L${pb.x},${pb.y}` : `M${pa.x},${pa.y} L${pb.x},${pb.y}`;
+    gCables.appendChild(sv('path', { d: path, fill: 'none', stroke: mode !== 'design' && !valid ? COL.error : col, 'stroke-width': w, 'stroke-dasharray': c.type === 'croise' ? '8 4' : null, 'data-cable': c.id }, [sv('title', {}, `Câble ${c.type === 'droit' ? 'droit' : c.type === 'croise' ? 'croisé' : 'ligne télécom'} — ${c.len} m`)]));
+  }
+  for (const n of M.nodes) gNodes.appendChild(drawNode(n));
+  drawSel();
+  const hint = $('#hint');
+  if (hint) hint.textContent = mode === 'design' ? (tool === 'cable' ? (cableFrom ? 'Cliquez sur le second point de connexion.' : 'Cliquez sur le premier point de connexion.') : tool === 'select' ? 'Clic droit sur un composant ou un point de connexion pour le configurer.' : 'Cliquez dans la surface de travail pour créer le composant.') : 'Clic droit sur un composant ou un point de connexion pour agir.';
+  persist();
+}
+function drawNode(n) {
+  const b = nodeBox(n); const x0 = n.x - b.w / 2, y0 = n.y - b.h / 2;
+  const off = !n.on && mode !== 'design';
+  const g = sv('g', { 'data-node': n.id, class: 'node' + (sel.has(n.id) ? ' sel' : '') });
+  g.appendChild(sv('title', {}, tooltipOf(n)));
+  const fill = off ? '#e5e7ea' : '#fff';
+  if (n.type === 'station') {
+    g.appendChild(sv('rect', { x: x0 + 14, y: y0, width: b.w - 28, height: b.h - 16, rx: 5, fill, stroke: '#2c3e50', 'stroke-width': 2 }));
+    g.appendChild(sv('rect', { x: x0 + 20, y: y0 + 5, width: b.w - 40, height: b.h - 28, rx: 2, fill: off ? '#b9bec3' : '#d6eaf8' }));
+    g.appendChild(sv('rect', { x: n.x - 14, y: y0 + b.h - 16, width: 28, height: 5, fill: '#2c3e50' }));
+    if (M.options.icons) {
+      let bx = x0 + b.w - 16;
+      const badge = (t, c, tip) => { g.appendChild(sv('rect', { x: bx - 12, y: y0 - 9, width: 14, height: 14, rx: 3, fill: c })); g.appendChild(sv('text', { x: bx - 5, y: y0 + 2, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff' }, t)); g.lastChild.appendChild(sv('title', {}, tip)); bx -= 16; };
+      if (n.routing && n.nics.length + (n.remote ? 1 : 0) > 1) badge('R', '#2980b9', 'Routage actif');
+      if (n.nat.on) badge('N', '#8e44ad', 'Translation NAT/PAT active');
+      if (n.rules.length) badge('F', '#c0392b', 'Filtrage actif');
+    }
+  } else if (n.type === 'hub' || n.type === 'switch') {
+    g.appendChild(sv('rect', { x: x0, y: y0, width: b.w, height: b.h, rx: 4, fill: off ? '#e5e7ea' : (n.type === 'hub' ? '#fdebd0' : '#d5f5e3'), stroke: '#2c3e50', 'stroke-width': 2 }));
+    if (n.type === 'switch') g.appendChild(sv('text', { x: x0 + b.w - 8, y: y0 + b.h - 4, 'text-anchor': 'end', 'font-size': 8, fill: '#566573', 'pointer-events': 'none' }, (n.mode === 'saf' ? 'S&F' : 'OTF') + (n.stp ? ' · STP' : '') + (n.vlan ? ' · V' + n.vlan : '')));
+  } else {
+    g.appendChild(sv('path', { d: `M${x0 + 30},${y0 + b.h - 8} a22,22 0 0 1 4,-42 a30,30 0 0 1 56,-8 a26,26 0 0 1 48,12 a22,22 0 0 1 14,38 z`, fill: '#eaf2f8', stroke: '#2c3e50', 'stroke-width': 2 }));
+    g.appendChild(sv('text', { x: n.x, y: n.y + 4, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#2c3e50' }, 'Internet'));
+  }
+  if (n.type === 'station') g.appendChild(sv('text', { x: n.x, y: y0 + b.h + 32, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: '#1c2833' }, n.name));
+  else if (n.type !== 'internet') g.appendChild(sv('text', { x: n.x, y: n.y + 4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#1c2833', 'pointer-events': 'none' }, n.name));
+  for (const pt of E.pointsOf(n)) {
+    const p = ptPos(pt);
+    const st = mode === 'design' ? (E.cableAt(M, pt.id) ? 'ok' : 'free') : E.pointState(M, pt);
+    const col = mode === 'design' ? '#ecf0f1' : COL[st];
+    const r = pt.kind === 'c' ? 8 : 6;
+    const c = sv('circle', { cx: p.x, cy: p.y, r, fill: col, stroke: pt.kind === 'q' ? '#2980b9' : '#1c2833', 'stroke-width': pt.kind === 'c' ? 3.5 : pt.kind === 'q' ? 3 : 1.5, 'data-pt': pt.id, class: 'pt' });
+    c.appendChild(sv('title', {}, ptTip(n, pt)));
+    g.appendChild(c);
+    const up = ptGeom(pt).edge === 'top';
+    if (n.type !== 'station') g.appendChild(sv('text', { x: p.x, y: p.y + (up ? -10 : 19), 'text-anchor': 'middle', 'font-size': 8, fill: '#566573', 'pointer-events': 'none' }, pt.label));
+    else if (n.nics.length > 1 || pt.kind === 'r') g.appendChild(sv('text', { x: p.x, y: p.y + (up ? -10 : 19), 'text-anchor': 'middle', 'font-size': 8, fill: '#566573', 'pointer-events': 'none' }, pt.label));
+  }
+  return g;
+}
+function ptTip(n, pt) {
+  if (n.type === 'station' && pt.kind === 'n') { const c = n.nics[pt.idx]; return `Carte ${pt.label}\nMAC : ${c.mac}` + (mode !== 'design' && c.ip ? `\nIP : ${c.ip} / ${c.mask}` : ''); }
+  if (pt.kind === 'r') { const fi = E.faiOfPoint(M, pt.id); return 'Carte d\'accès distant' + (fi ? '\nIP : ' + fi.ip : ''); }
+  const lab = { p: 'port normal', c: 'port de cascade', q: 'port 802.1q', f: 'accès FAI' }[pt.kind];
+  return (n.type === 'switch' ? 'Port ' + pt.num + ' — ' : '') + lab;
+}
+function tooltipOf(n) {
+  if (n.type === 'switch') return `Switch ${n.name}\n${n.ports} ports, ${n.cascade} cascade, ${n.dot1q} 802.1q\n${n.mode === 'saf' ? 'Store and forward' : 'On the fly'} — spanning tree : ${n.stp ? 'oui' : 'non'} — vlan : niveau ${n.vlan}`;
+  if (n.type === 'station') { const fs = E.ifaces(M, n).map(f => f.label + ' ' + (f.ip || '—') + (f.mac ? ' (' + f.mac + ')' : '')); return n.name + '\n' + fs.join('\n') + (n.gateway ? '\nPasserelle : ' + n.gateway : ''); }
+  return n.name;
+}
+function drawSel() {
+  gSel.textContent = '';
+  if (drag && drag.kind === 'band') {
+    const x = Math.min(drag.x0, mouse.x), y = Math.min(drag.y0, mouse.y);
+    gSel.appendChild(sv('rect', { x, y, width: Math.abs(mouse.x - drag.x0), height: Math.abs(mouse.y - drag.y0), fill: 'rgba(41,128,185,.12)', stroke: '#2980b9', 'stroke-dasharray': '4 3' }));
+  }
+  if (cableFrom && mode === 'design') {
+    const a = ptPos(ptById(cableFrom));
+    gSel.appendChild(sv('line', { x1: a.x, y1: a.y, x2: mouse.x, y2: mouse.y, stroke: '#2980b9', 'stroke-width': 2, 'stroke-dasharray': '5 4' }));
+  }
+}
+
+/* ---------- interactions souris ---------- */
+function svgPos(ev) { const r = svg.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+function targetInfo(t) {
+  const pt = t.closest && t.closest('[data-pt]'); const nd = t.closest && t.closest('[data-node]'); const cb = t.closest && t.closest('[data-cable]');
+  return { pt: pt && pt.getAttribute('data-pt'), node: nd && nd.getAttribute('data-node'), cable: cb && cb.getAttribute('data-cable') };
+}
+svg.addEventListener('mousedown', ev => {
+  hideMenu();
+  if (ev.button !== 0) return;
+  mouse = svgPos(ev);
+  const ti = targetInfo(ev.target);
+  if (mode !== 'design') return;
+  if (tool === 'cable') {
+    if (ti.pt) clickPointForCable(ti.pt);
+    else { cableFrom = null; render(); }
+    return;
+  }
+  if (ti.node && tool === 'select') {
+    if (ev.ctrlKey || ev.metaKey || ev.shiftKey) { sel.has(ti.node) ? sel.delete(ti.node) : sel.add(ti.node); }
+    else if (!sel.has(ti.node)) { sel = new Set([ti.node]); }
+    drag = { kind: 'move', x0: mouse.x, y0: mouse.y, orig: [...sel].map(id => { const n = E.nodeById(M, id); return [id, n.x, n.y]; }) };
+    render(); return;
+  }
+  if (tool !== 'select' && !ti.node) { createNode(tool, mouse.x, mouse.y); return; }
+  if (!ti.node) { sel.clear(); drag = { kind: 'band', x0: mouse.x, y0: mouse.y }; render(); }
+});
+window.addEventListener('mousemove', ev => {
+  if (!drag && !cableFrom) return;
+  mouse = svgPos(ev);
+  if (drag && drag.kind === 'move') {
+    drag.orig.forEach(([id, x, y]) => { const n = E.nodeById(M, id); n.x = Math.max(40, x + mouse.x - drag.x0); n.y = Math.max(40, y + mouse.y - drag.y0); });
+    render();
+  } else if (drag && drag.kind === 'band') drawSel();
+  else drawSel();
+});
+window.addEventListener('mouseup', () => {
+  if (drag && drag.kind === 'band') {
+    const x1 = Math.min(drag.x0, mouse.x), x2 = Math.max(drag.x0, mouse.x), y1 = Math.min(drag.y0, mouse.y), y2 = Math.max(drag.y0, mouse.y);
+    sel = new Set(M.nodes.filter(n => n.x >= x1 && n.x <= x2 && n.y >= y1 && n.y <= y2).map(n => n.id));
+  }
+  if (drag) { drag = null; render(); }
+});
+window.addEventListener('keydown', ev => {
+  if (ev.target.closest && ev.target.closest('input,textarea,select')) return;
+  if (ev.key === 'Delete' && mode === 'design' && sel.size) deleteSelection();
+  if (ev.key === 'Escape') { cableFrom = null; hideMenu(); render(); }
+  if (ev.key === 'Enter' && player && player.demo) demoPlay();
+});
+function createNode(kind, x, y) {
+  let n;
+  if (kind === 'station') n = E.addStation(M, x, y);
+  else if (kind === 'hub') n = E.addHub(M, x, y);
+  else if (kind === 'switch') n = E.addSwitch(M, x, y);
+  else if (kind === 'internet') { n = E.addInternet(M, x, y); if (!n) { toast(null, 'Il ne peut y avoir qu\'un seul composant Internet.', true); return; } }
+  tool = 'select'; sel = new Set([n.id]); syncToolbar(); render();
+}
+function clickPointForCable(ptId) {
+  if (!cableFrom) {
+    if (E.cableAt(M, ptId)) { toast(null, 'Ce point de connexion est déjà relié : supprimez d\'abord le câble.', true); return; }
+    cableFrom = ptId; render(); return;
+  }
+  if (cableFrom === ptId) { cableFrom = null; render(); return; }
+  if (E.cableAt(M, ptId)) { toast(null, 'Ce point de connexion est déjà relié : supprimez d\'abord le câble.', true); return; }
+  const pa = ptById(cableFrom), pb = ptById(ptId);
+  if (pa.node === pb.node) { toast(null, 'Impossible de relier deux points d\'un même composant.', true); cableFrom = null; render(); return; }
+  M.cables.push({ id: 'c' + E.uid(M), a: cableFrom, b: ptId, type: E.suggestCableType(M, cableFrom, ptId), len: 10 });
+  cableFrom = null; render();
+}
+function deleteNodes(ids) {
+  M.cables = M.cables.filter(c => !ids.has(c.a.split(':')[0]) && !ids.has(c.b.split(':')[0]));
+  M.nodes = M.nodes.filter(n => !ids.has(n.id)); sel.clear(); render();
+}
+function deleteSelection() { deleteNodes(new Set(sel)); }
+
+/* ---------- menus contextuels ---------- */
+const menuEl = el('div', { id: 'menu', class: 'menu', style: { display: 'none' } });
+function hideMenu() { menuEl.style.display = 'none'; }
+function showMenu(x, y, items) {
+  menuEl.textContent = '';
+  items.filter(Boolean).forEach(it => {
+    if (it === '-') { menuEl.appendChild(el('div', { class: 'sep' })); return; }
+    menuEl.appendChild(el('div', { class: 'mi' + (it.disabled ? ' dis' : ''), onclick: () => { hideMenu(); if (!it.disabled) it.fn(); } }, [(it.check ? (it.checked ? '☑ ' : '☐ ') : '') + it.label]));
+  });
+  menuEl.style.left = Math.min(x, window.innerWidth - 240) + 'px'; menuEl.style.top = Math.min(y, window.innerHeight - 20 - 26 * items.length) + 'px'; menuEl.style.display = 'block';
+}
+svg.addEventListener('contextmenu', ev => {
+  ev.preventDefault(); if (player && !player.done) { toast(null, 'Simulation en cours : arrêtez-la (Stop) pour modifier le réseau.'); return; }
+  const ti = targetInfo(ev.target);
+  const items = ti.pt ? pointMenu(ti.pt) : ti.node ? nodeMenu(ti.node) : [];
+  if (items.length) showMenu(ev.clientX, ev.clientY, items);
+});
+document.addEventListener('mousedown', ev => { if (!ev.target.closest('#menu')) hideMenu(); });
+
+function nodeMenu(id) {
+  const n = E.nodeById(M, id); const it = [];
+  if (mode === 'design') {
+    if (n.type !== 'internet') it.push({ label: 'Configurer…', fn: () => configNode(n) });
+    it.push({ label: 'Supprimer', fn: () => deleteNodes(new Set([n.id])) });
+    return it;
+  }
+  if (n.type !== 'internet') it.push({ label: n.on ? 'Éteindre' : 'Allumer', fn: () => { n.on = !n.on; if (mode === 'eth' && n.type === 'switch') E.computeStp(M); render(); } });
+  if (mode === 'eth' && n.type === 'switch') {
+    it.push('-', { label: 'Table mac/port…', fn: () => macTableDialog(n) }, { label: 'Découvrir le réseau', fn: () => { E.discoverSwitch(M, n); render(); toast(n.id, 'Table mac/port remplie.'); } },
+      { label: 'Vider la table mac/port', fn: () => { n.macTable = []; render(); } },
+      { label: 'Store and forward', check: true, checked: n.mode === 'saf', fn: () => { n.mode = n.mode === 'saf' ? 'otf' : 'saf'; render(); } });
+    if (n.vlan === 1) it.push({ label: 'Table port/vlan…', fn: () => portVlanDialog(n) });
+    if (n.vlan === 2) it.push({ label: 'Table port/vlan (consultation)…', fn: () => portVlanDialog(n, true) }, { label: 'Table mac/vlan…', fn: () => macVlanDialog(n) }, { label: 'Réinitialiser la table port/vlan', fn: () => { n.portVlan = {}; render(); } });
+  }
+  if ((mode === 'ip' || mode === 'tr') && n.type === 'station') {
+    it.push('-', { label: 'Configuration IP…', fn: () => ipConfigDialog(n) },
+      { label: 'Table de routage…', fn: () => routeDialog(n) }, { label: 'Cache ARP…', fn: () => arpDialog(n) }, { label: 'Fichier hosts…', fn: () => hostsDialog(n) },
+      { label: 'Vider le cache ARP', fn: () => { n.arp = []; render(); } }, '-', { label: 'Ping…', fn: () => pingDialog(n) });
+    if (mode === 'tr') it.push('-', { label: 'Ports écoutés…', fn: () => listenDialog(n) }, { label: 'Règles de filtrage…', fn: () => rulesDialog(n) }, { label: 'Table natPat…', fn: () => natDialog(n) },
+      { label: 'Échanges en cours…', fn: () => exchDialog(n) }, { label: 'Envoyer une requête…', fn: () => requestDialog(n) }, { label: 'Répondre à une requête…', fn: () => replyDialog(n) });
+  }
+  return it;
+}
+function pointMenu(ptId) {
+  const pt = ptById(ptId); const n = E.nodeById(M, pt.node); const it = [];
+  const c = E.cableAt(M, ptId);
+  if (mode === 'design') {
+    if (c) it.push({ label: 'Configurer le câble…', fn: () => cableDialog(c) }, { label: 'Supprimer le câble', fn: () => { M.cables = M.cables.filter(x => x !== c); render(); } });
+    return it;
+  }
+  if (mode === 'eth' && n.type === 'station' && pt.kind === 'n') it.push({ label: 'Émettre une trame…', fn: () => emitDialog(n, pt) });
+  if (mode === 'eth' && n.type === 'switch' && !n.stp) it.push({ label: E.isBlocked(n, pt) ? 'Débloquer le port' : 'Bloquer le port', fn: () => { n.manualBlock[pt.num] = !n.manualBlock[pt.num]; render(); } });
+  if ((mode === 'ip' || mode === 'tr') && n.type === 'station' && pt.kind === 'n') it.push({ label: 'Configuration IP de la carte…', fn: () => nicDialog(n, pt) });
+  return it;
+}
+
+/* ---------- boîtes de dialogue ---------- */
+const modalRoot = el('div', { id: 'modals' });
+function dialog(title, body, buttons, o) {
+  o = o || {};
+  const box = el('div', { class: 'dlg' + (o.wide ? ' wide' : '') + (o.free ? ' free' : '') });
+  const bar = el('div', { class: 'dlg-t' }, [title]);
+  const foot = el('div', { class: 'dlg-b' });
+  const wrap = el('div', { class: o.free ? 'dlgwrap free' : 'dlgwrap' }, [box]);
+  const close = () => wrap.remove();
+  (buttons || []).forEach(b => foot.appendChild(el('button', { class: b.primary ? 'btn pri' : 'btn', onclick: () => { const r = b.fn ? b.fn(close) : undefined; if (r !== false && !b.keep) close(); } }, [b.label])));
+  box.append(bar, body, foot);
+  if (o.free) {
+    box.style.left = (60 + Math.random() * 120) + 'px'; box.style.top = (90 + Math.random() * 80) + 'px';
+    let dr = null; bar.addEventListener('mousedown', e => { dr = [e.clientX - box.offsetLeft, e.clientY - box.offsetTop]; e.preventDefault(); });
+    window.addEventListener('mousemove', e => { if (dr) { box.style.left = (e.clientX - dr[0]) + 'px'; box.style.top = (e.clientY - dr[1]) + 'px'; } });
+    window.addEventListener('mouseup', () => { dr = null; });
+  }
+  modalRoot.appendChild(wrap);
+  const f = box.querySelector('input,select,textarea'); if (f) f.focus();
+  return { close, box };
+}
+function formDialog(title, fields, onOk, o) {
+  const body = el('div', { class: 'form' }); const inputs = {};
+  fields.forEach(f => {
+    let inp;
+    if (f.type === 'select') inp = el('select', {}, f.options.map(op => el('option', { value: op[0], selected: String(op[0]) === String(f.value) }, [op[1]])));
+    else if (f.type === 'check') inp = el('input', { type: 'checkbox', checked: !!f.value });
+    else if (f.type === 'textarea') { inp = el('textarea', { rows: f.rows || 8, spellcheck: 'false' }); inp.value = f.value || ''; }
+    else if (f.type === 'readonly') inp = el('input', { type: 'text', value: f.value, readonly: true });
+    else { inp = el('input', { type: f.type === 'number' ? 'number' : 'text', value: f.value == null ? '' : f.value, min: f.min, max: f.max, placeholder: f.ph || '' }); }
+    inputs[f.k] = inp;
+    body.appendChild(el('label', { class: f.type === 'check' ? 'chk' : '' }, f.type === 'check' ? [inp, ' ' + f.label] : [el('span', {}, [f.label]), inp]));
+    if (f.hint) body.appendChild(el('div', { class: 'hint' }, [f.hint]));
+  });
+  const err = el('div', { class: 'err' });
+  body.appendChild(err);
+  const get = () => { const v = {}; fields.forEach(f => { const i = inputs[f.k]; v[f.k] = f.type === 'check' ? i.checked : f.type === 'number' ? (i.value === '' ? null : Number(i.value)) : i.value; }); return v; };
+  return dialog(title, body, [{ label: 'Annuler' }, { label: (o && o.okLabel) || 'OK', primary: true, fn: () => { const r = onOk(get()); if (r) { err.textContent = r; return false; } } }], o);
+}
+function tableDialog(title, cols, rows, o) {
+  o = o || {};
+  rows = rows.map(r => Object.assign({}, r));
+  const body = el('div', { class: 'tbl' });
+  if (o.note) body.appendChild(el('div', { class: 'hint' }, [o.note]));
+  const tbl = el('table'); body.appendChild(tbl);
+  const err = el('div', { class: 'err' }); body.appendChild(err);
+  let selRow = -1;
+  function draw() {
+    tbl.textContent = '';
+    tbl.appendChild(el('tr', {}, cols.map(c => el('th', {}, [c.label]))));
+    rows.forEach((r, i) => {
+      const tr = el('tr', { class: i === selRow ? 'sel' : '', onclick: () => { selRow = i; tbl.querySelectorAll('tr').forEach((t, j) => t.classList.toggle('sel', j === i + 1)); } });
+      cols.forEach(c => {
+        let inp;
+        const ro = o.readOnly || c.ro;
+        if (c.type === 'select') {
+          const opts = typeof c.options === 'function' ? c.options() : c.options;
+          inp = el('select', { disabled: ro }, opts.map(op => el('option', { value: op[0], selected: String(op[0]) === String(r[c.k]) }, [op[1]])));
+          inp.addEventListener('change', () => { r[c.k] = inp.value; });
+        } else if (c.type === 'check') {
+          inp = el('input', { type: 'checkbox', checked: !!r[c.k], disabled: ro }); inp.addEventListener('change', () => { r[c.k] = inp.checked; });
+        } else {
+          inp = el('input', { type: 'text', value: r[c.k] == null ? '' : r[c.k], readonly: ro, size: c.size || 14 }); inp.addEventListener('input', () => { r[c.k] = inp.value; });
+        }
+        tr.appendChild(el('td', {}, [inp]));
+      });
+      tbl.appendChild(tr);
+    });
+    if (!rows.length) tbl.appendChild(el('tr', {}, [el('td', { colspan: cols.length, class: 'empty' }, ['(vide)'])]));
+  }
+  draw();
+  const btns = [];
+  if (!o.readOnly && o.newRow) {
+    btns.push({ label: '＋ Ajouter', keep: true, fn: () => { rows.push(o.newRow()); draw(); return false; } });
+    btns.push({ label: '－ Supprimer', keep: true, fn: () => { if (selRow >= 0) rows.splice(selRow, 1); else rows.length = 0; selRow = -1; draw(); return false; } });
+  }
+  btns.push({ label: o.readOnly ? 'Fermer' : 'Annuler' });
+  if (!o.readOnly) btns.push({ label: 'OK', primary: true, fn: () => { const e = o.onOk ? o.onOk(rows) : null; if (e) { err.textContent = e; return false; } } });
+  return dialog(title, body, btns, { wide: true });
+}
+function toast(nid, text, sticky) {
+  const t = el('div', { class: 'toast' + (sticky ? ' sticky' : ''), onclick: () => t.remove() }, [(nid ? '[' + nodeName(nid) + '] ' : '') + text]);
+  $('#toasts').appendChild(t);
+  logLine(text);
+  if (!sticky) setTimeout(() => t.remove(), 3500);
+  else setTimeout(() => t.remove(), 12000);
+}
+function logLine(text) { const l = $('#log'); if (!l) return; l.appendChild(el('div', {}, [text])); l.scrollTop = l.scrollHeight; }
+const num = v => (v === null || v === '' || isNaN(Number(v))) ? null : Number(v);
+
+/* ---------- configuration (conception) ---------- */
+function connectedPoints(n) { return E.pointsOf(n).filter(p => E.cableAt(M, p.id)); }
+function configNode(n) {
+  if (n.type === 'station') {
+    formDialog('Configurer la station', [
+      { k: 'name', label: 'Nom', value: n.name }, { k: 'nics', label: 'Nombre de cartes réseau', type: 'number', value: n.nics.length, min: 0, max: 8 },
+      { k: 'remote', label: 'Carte d\'accès distant', type: 'check', value: n.remote }
+    ], v => {
+      const nm = v.name.trim(); if (!nm) return 'Le nom est obligatoire.';
+      if (M.nodes.some(o => o !== n && o.name.toLowerCase() === nm.toLowerCase())) return 'Ce nom est déjà utilisé.';
+      if (v.nics === null || v.nics < 0 || v.nics > 8) return 'Nombre de cartes : 0 à 8.';
+      if (v.nics + (v.remote ? 1 : 0) < 1) return 'Une station doit avoir au moins une carte.';
+      for (let i = v.nics; i < n.nics.length; i++) if (E.cableAt(M, n.id + ':n' + i)) return 'La carte eth' + i + ' est connectée : supprimez d\'abord le câble.';
+      if (!v.remote && n.remote && E.cableAt(M, n.id + ':r0')) return 'La carte d\'accès distant est connectée : supprimez d\'abord le câble.';
+      n.name = nm;
+      while (n.nics.length > v.nics) n.nics.pop();
+      while (n.nics.length < v.nics) n.nics.push({ mac: E.newMac(M), ip: '', mask: '255.255.255.0' });
+      n.remote = v.remote; if (n.nat.pub >= n.nics.length + (n.remote ? 1 : 0)) n.nat.pub = 0;
+      render();
+    });
+  } else if (n.type === 'hub') {
+    formDialog('Configurer le hub', [
+      { k: 'name', label: 'Nom', value: n.name }, { k: 'ports', label: 'Ports normaux', type: 'number', value: n.ports, min: 1, max: 24 }, { k: 'casc', label: 'Ports de cascade', type: 'number', value: n.cascade, min: 0, max: 8 }
+    ], v => {
+      if (!v.name.trim()) return 'Le nom est obligatoire.';
+      if (v.ports === null || v.casc === null || v.ports < 1) return 'Valeurs invalides.';
+      for (let i = v.ports; i < n.ports; i++) if (E.cableAt(M, n.id + ':p' + i)) return 'Le port ' + (i + 1) + ' est connecté : supprimez d\'abord le câble.';
+      for (let i = v.casc; i < n.cascade; i++) if (E.cableAt(M, n.id + ':c' + i)) return 'Un port de cascade est connecté : supprimez d\'abord le câble.';
+      n.name = v.name.trim(); n.ports = v.ports; n.cascade = v.casc; render();
+    });
+  } else if (n.type === 'switch') {
+    formDialog('Configurer le switch', [
+      { k: 'name', label: 'Nom', value: n.name }, { k: 'ports', label: 'Ports normaux', type: 'number', value: n.ports, min: 1, max: 24 },
+      { k: 'casc', label: 'Ports de cascade', type: 'number', value: n.cascade, min: 0, max: 8 }, { k: 'q', label: 'Ports 802.1q', type: 'number', value: n.dot1q, min: 0, max: 8 },
+      { k: 'mode', label: 'Type', type: 'select', value: n.mode, options: [['otf', 'On the fly'], ['saf', 'Store and forward']] },
+      { k: 'stp', label: 'Gestion du spanning tree', type: 'check', value: n.stp },
+      { k: 'vlan', label: 'Niveau de vlan géré', type: 'select', value: n.vlan, options: [[0, 'Aucun'], [1, 'Niveau 1 (par port)'], [2, 'Niveau 2 (par adresse MAC)']] }
+    ], v => {
+      if (!v.name.trim()) return 'Le nom est obligatoire.';
+      if (v.ports === null || v.casc === null || v.q === null || v.ports < 1) return 'Valeurs invalides.';
+      const chk = (kind, from, to) => { for (let i = from; i < to; i++) if (E.cableAt(M, n.id + ':' + kind + i)) return true; return false; };
+      if (chk('p', v.ports, n.ports) || chk('c', v.casc, n.cascade) || chk('q', v.q, n.dot1q)) return 'Un des ports à supprimer est connecté : supprimez d\'abord le câble.';
+      n.name = v.name.trim(); n.ports = v.ports; n.cascade = v.casc; n.dot1q = v.q; n.mode = v.mode; n.stp = v.stp; n.vlan = Number(v.vlan); n.macTable = []; n.portVlan = {}; n.macVlan = {}; render();
+    });
+  }
+}
+function cableDialog(c) {
+  const a = ptById(c.a), b = ptById(c.b);
+  const tel = a.kind === 'r' || a.kind === 'f' || b.kind === 'r' || b.kind === 'f';
+  formDialog('Configurer le câble', [
+    { k: 'type', label: 'Type', type: 'select', value: c.type, options: tel ? [['telecom', 'Ligne télécom'], ['droit', 'Câble droit'], ['croise', 'Câble croisé']] : [['droit', 'Câble droit'], ['croise', 'Câble croisé'], ['telecom', 'Ligne télécom']] },
+    { k: 'len', label: 'Longueur (m)', type: 'number', value: c.len, min: 1, max: 1000 }
+  ], v => { if (v.len === null || v.len < 1) return 'Longueur invalide.'; c.type = v.type; c.len = v.len; render(); });
+}
+
+/* ---------- Ethernet : tables et émission ---------- */
+const macLabel = mac => { for (const n of M.nodes) if (n.type === 'station') { const i = n.nics.findIndex(c => c.mac === mac); if (i >= 0) return n.name + (n.nics.length > 1 ? ' eth' + i : '') + ' (' + mac + ')'; } return mac; };
+const allMacOptions = except => { const r = []; M.nodes.filter(n => n.type === 'station').forEach(n => n.nics.forEach((c, i) => { if (c.mac !== except) r.push([c.mac, n.name + (n.nics.length > 1 ? ' eth' + i : '') + ' — ' + c.mac]); })); return r; };
+function macTableDialog(sw) {
+  const ports = E.pointsOf(sw).map(p => [p.num, String(p.num)]);
+  tableDialog('Table mac/port de ' + sw.name, [{ k: 'mac', label: 'Adresse MAC', type: 'select', options: () => allMacOptions(), size: 18 }, { k: 'port', label: 'Port', type: 'select', options: ports }, { k: 'ttl', label: 'TTL', size: 5 }],
+    sw.macTable, { newRow: () => ({ mac: (allMacOptions()[0] || ['00:00'])[0], port: 1, ttl: M.options.macTtl }), onOk: rows => { for (const r of rows) { if (num(r.ttl) === null || num(r.ttl) < 1) return 'TTL invalide.'; } sw.macTable = rows.map(r => ({ mac: r.mac, port: Number(r.port), ttl: Number(r.ttl) })); render(); } });
+}
+function portVlanDialog(sw, ro) {
+  const rows = E.pointsOf(sw).filter(p => p.kind !== 'q').map(p => ({ port: p.num, vlan: sw.portVlan[p.num] || 1 }));
+  tableDialog('Table port/vlan de ' + sw.name, [{ k: 'port', label: 'Port', ro: true, size: 5 }, { k: 'vlan', label: 'Vlan', size: 5 }], rows, { readOnly: !!ro, note: ro ? 'Remplie automatiquement à partir de la table mac/vlan.' : 'Les ports 802.1q transportent tous les vlans.', onOk: rs => { const t = {}; for (const r of rs) { const v = num(r.vlan); if (v === null || v < 1 || v > 99) return 'Vlan : 1 à 99.'; t[r.port] = v; } sw.portVlan = t; render(); } });
+}
+function macVlanDialog(sw) {
+  tableDialog('Table mac/vlan de ' + sw.name, [{ k: 'mac', label: 'Adresse MAC', type: 'select', options: () => allMacOptions(), size: 18 }, { k: 'vlan', label: 'Vlan', size: 5 }],
+    Object.keys(sw.macVlan).map(k => ({ mac: k, vlan: sw.macVlan[k] })), { newRow: () => ({ mac: (allMacOptions()[0] || ['00:00'])[0], vlan: 1 }), onOk: rs => { const t = {}; for (const r of rs) { const v = num(r.vlan); if (v === null || v < 1 || v > 99) return 'Vlan : 1 à 99.'; t[r.mac] = v; } sw.macVlan = t; for (const e of sw.macTable) if (t[e.mac]) sw.portVlan[e.port] = t[e.mac]; render(); } });
+}
+let pendingEmits = [];
+function emitDialog(st, pt) {
+  const real = SIM.ethType === 'real';
+  const nic = st.nics[pt.idx];
+  const fields = [{ k: 'dst', label: 'Destinataire', type: 'select', value: E.BC, options: [[E.BC, 'Diffusion (broadcast)']].concat(allMacOptions(nic.mac)) }];
+  if (real) fields.push({ k: 'size', label: 'Taille de la trame', type: 'select', value: 'normal', options: [['short', 'Courte'], ['normal', 'Normale'], ['long', 'Longue']] }, { k: 'dt', label: 'Décalage d\'émission (ms)', type: 'number', value: 0, min: 0, max: 5000 });
+  const entry = { st, pt, ready: false, params: null, dlg: null };
+  if (real && pendingEmits.length >= 2) { toast(null, 'Deux trames concurrentes au maximum.', true); return; }
+  if (real) pendingEmits.push(entry);
+  entry.dlg = formDialog('Émission d\'une trame — ' + st.name + ' (' + pt.label + ')', fields, v => {
+    entry.ready = true; entry.params = { from: pt.id, dst: v.dst, size: v.size || 'normal', t0: v.dt || 0 };
+    if (!real) { runEth([entry.params]); return; }
+    if (pendingEmits.every(e => e.ready)) { const fr = pendingEmits.map(e => e.params); pendingEmits = []; runEth(fr); }
+    else toast(null, 'Première trame prête : validez l\'autre émission pour les lancer ensemble.');
+  }, { free: real, okLabel: 'OK' });
+  if (real) {
+    const cancelBtn = entry.dlg.box.querySelector('.dlg-b .btn');
+    cancelBtn.addEventListener('click', () => { pendingEmits = pendingEmits.filter(e => e !== entry); });
+  }
+}
+function runEth(frames) {
+  const real = SIM.ethType === 'real';
+  const p = { kind: 'eth', frames, demos: !real && SIM.ethType !== 'none', real, full: real && SIM.full, msgRecv: SIM.msgRecv && !(frames.length > 1), mode: 'eth' };
+  launch(p, SIM.ethType);
+}
+
+/* ---------- IP / transport : dialogues ---------- */
+const ifOptions = n => E.ifaces(M, n).map(f => [f.i, f.label + (f.ip ? ' (' + f.ip + ')' : '')]);
+function nicDialog(n, pt) {
+  const c = n.nics[pt.idx];
+  formDialog('Configuration IP — ' + n.name + ' ' + pt.label, [{ k: 'ip', label: 'Adresse IP', value: c.ip, ph: '192.168.1.10' }, { k: 'mask', label: 'Masque de sous-réseau', value: c.mask }], v => {
+    if (v.ip.trim() && E.ip2int(v.ip) === null) return 'Adresse IP invalide.';
+    if (!E.validMask(v.mask)) return 'Masque invalide.';
+    c.ip = v.ip.trim(); c.mask = v.mask.trim(); render();
+  });
+}
+function ipConfigDialog(n) {
+  const multi = E.ifaces(M, n).length > 1;
+  const fields = [{ k: 'name', label: 'Nom d\'hôte', type: 'readonly', value: n.name }];
+  n.nics.forEach((c, i) => { fields.push({ k: 'ip' + i, label: 'eth' + i + ' — adresse IP', value: c.ip }, { k: 'mask' + i, label: 'eth' + i + ' — masque', value: c.mask }); });
+  fields.push({ k: 'gw', label: 'Passerelle par défaut', value: n.gateway, hint: 'Laisser vide si aucune.' });
+  if (multi) fields.push({ k: 'routing', label: 'Routage actif', type: 'check', value: n.routing });
+  if (mode === 'tr' && multi) {
+    fields.push({ k: 'nat', label: 'Translation d\'adresse et de port (natPat)', type: 'check', value: n.nat.on },
+      { k: 'pub', label: 'Interface publique', type: 'select', value: n.nat.pub, options: ifOptions(n) });
+  }
+  formDialog('Configuration IP — ' + n.name, fields, v => {
+    for (let i = 0; i < n.nics.length; i++) {
+      if (v['ip' + i].trim() && E.ip2int(v['ip' + i]) === null) return 'Adresse IP invalide (eth' + i + ').';
+      if (!E.validMask(v['mask' + i])) return 'Masque invalide (eth' + i + ').';
+    }
+    if (v.gw.trim() && E.ip2int(v.gw) === null) return 'Passerelle invalide.';
+    n.nics.forEach((c, i) => { c.ip = v['ip' + i].trim(); c.mask = v['mask' + i].trim(); });
+    n.gateway = v.gw.trim(); if (multi) n.routing = v.routing;
+    if (mode === 'tr' && multi) { n.nat.on = v.nat; n.nat.pub = Number(v.pub); }
+    render();
+  });
+}
+function routeDialog(n) {
+  const auto = E.routesOf(M, n).filter(r => r.src !== 'statique');
+  const rows = n.routes.map(r => Object.assign({}, r));
+  const body = el('div');
+  body.appendChild(el('div', { class: 'hint' }, ['Routes automatiques (lecture seule) :']));
+  const t = el('table', { class: 'ro' }, [el('tr', {}, ['Destination', 'Masque', 'Passerelle', 'Interface', 'Origine'].map(h => el('th', {}, [h])))]);
+  auto.forEach(r => t.appendChild(el('tr', {}, [r.net, r.mask, r.gw || '—', E.ifaces(M, n)[r.iface].label, r.src].map(x => el('td', {}, [x])))));
+  body.appendChild(t);
+  const inner = tableDialog('Table de routage de ' + n.name, [{ k: 'net', label: 'Destination' }, { k: 'mask', label: 'Masque' }, { k: 'gw', label: 'Passerelle' }], rows, {
+    newRow: () => ({ net: '', mask: '255.255.255.0', gw: '' }), note: 'Routes statiques (la métrique n\'est pas prise en compte ; une seule route par destination). Les routes directes et la route par défaut sont déduites de la configuration IP.',
+    onOk: rs => {
+      const seen = new Set();
+      for (const r of rs) {
+        if (E.ip2int(r.net) === null || !E.validMask(r.mask) || E.ip2int(r.gw) === null) return 'Route invalide : ' + r.net + ' ' + r.mask + ' ' + r.gw;
+        const k = r.net + '/' + r.mask; if (seen.has(k)) return 'Une seule route par destination (' + k + ').'; seen.add(k);
+        if (!E.ifaces(M, n).some(f => f.ip && E.inNet(r.gw, f.ip, f.mask))) return 'La passerelle ' + r.gw + ' n\'est sur aucun réseau directement connecté.';
+      }
+      n.routes = rs.map(r => ({ net: r.net.trim(), mask: r.mask.trim(), gw: r.gw.trim() })); render();
+    }
+  });
+  const nodeBody = inner.box.querySelector('.tbl'); nodeBody.insertBefore(body, nodeBody.firstChild);
+}
+function arpDialog(n) {
+  tableDialog('Cache ARP de ' + n.name, [{ k: 'ip', label: 'Adresse IP' }, { k: 'mac', label: 'Adresse MAC', type: 'select', options: () => allMacOptions(), size: 18 }, { k: 'static', label: 'Statique', type: 'check' }, { k: 'ttl', label: 'TTL', size: 4 }],
+    n.arp, { newRow: () => ({ ip: '', mac: (allMacOptions()[0] || ['00:00'])[0], static: true, ttl: M.options.arpTtl }), onOk: rs => { for (const r of rs) { if (E.ip2int(r.ip) === null) return 'Adresse IP invalide : ' + r.ip; } n.arp = rs.map(r => ({ ip: r.ip.trim(), mac: r.mac, static: !!r.static, ttl: num(r.ttl) || M.options.arpTtl })); render(); } });
+}
+function hostsDialog(n) {
+  tableDialog('Fichier hosts de ' + n.name, [{ k: 'name', label: 'Nom' }, { k: 'ip', label: 'Adresse IP' }], n.hosts, { newRow: () => ({ name: '', ip: '' }), note: 'Seul mécanisme de résolution de noms de cette version.', onOk: rs => { for (const r of rs) { if (!r.name.trim()) return 'Nom vide.'; if (E.ip2int(r.ip) === null) return 'Adresse IP invalide : ' + r.ip; } n.hosts = rs.map(r => ({ name: r.name.trim(), ip: r.ip.trim() })); render(); } });
+}
+function listenDialog(n) {
+  tableDialog('Ports écoutés par ' + n.name, [{ k: 'proto', label: 'Protocole', type: 'select', options: [['TCP', 'TCP'], ['UDP', 'UDP']] }, { k: 'port', label: 'Port', size: 6 }], n.listen, {
+    newRow: () => ({ proto: 'TCP', port: '80' }), note: 'Seules les requêtes adressées à ces ports sont acceptées.',
+    onOk: rs => { for (const r of rs) { const p = num(r.port); if (p === null || p < 1 || p > 65535) return 'Port invalide : ' + r.port; } n.listen = rs.map(r => ({ proto: r.proto, port: Number(r.port) })); render(); }
+  });
+}
+function rulesDialog(n) {
+  const rows = n.rules.slice().sort((a, b) => a.order - b.order);
+  const io = [['', 'Toutes']].concat(ifOptions(n));
+  tableDialog('Règles de filtrage de ' + n.name, [{ k: 'order', label: 'N°', size: 3 }, { k: 'inIf', label: 'Entrée', type: 'select', options: io }, { k: 'outIf', label: 'Sortie', type: 'select', options: io },
+    { k: 'proto', label: 'Proto', type: 'select', options: [['', '*'], ['TCP', 'TCP'], ['UDP', 'UDP'], ['ICMP', 'ICMP']] }, { k: 'src', label: 'Source IP', size: 15 }, { k: 'sport', label: 'Port', size: 5 }, { k: 'dst', label: 'Destination IP', size: 15 }, { k: 'dport', label: 'Port', size: 5 }],
+  rows, {
+    newRow: () => ({ order: rows.length + 1, inIf: '', outIf: '', proto: '', src: '', sport: '', dst: '', dport: '' }),
+    note: 'Sans règle : aucun filtrage. Dès qu\'une règle existe, tout paquet qui ne correspond à aucune règle est bloqué. IP en notation CIDR (adresse/bits) ; sans bits : masque de classe pour une adresse réseau, /32 pour une adresse d\'hôte. Les règles se réordonnent en modifiant le N°.',
+    onOk: rs => {
+      for (const r of rs) {
+        if (E.parseCidr(r.src) === null) return 'Source invalide : ' + r.src; if (E.parseCidr(r.dst) === null) return 'Destination invalide : ' + r.dst;
+        for (const k of ['sport', 'dport']) if (String(r[k]).trim() !== '' && (num(r[k]) === null || num(r[k]) < 0 || num(r[k]) > 65535)) return 'Port invalide : ' + r[k];
+        if (num(r.order) === null) return 'N° d\'ordre invalide.';
+      }
+      n.rules = rs.map(r => ({ order: Number(r.order), inIf: r.inIf, outIf: r.outIf, proto: r.proto, src: String(r.src).trim(), sport: String(r.sport).trim(), dst: String(r.dst).trim(), dport: String(r.dport).trim() })).sort((a, b) => a.order - b.order); render();
+    }
+  });
+}
+function natDialog(n) {
+  const rows = n.maps.map(x => Object.assign({}, x));
+  const body = el('div');
+  body.appendChild(el('div', { class: 'hint' }, ['Entrées générées par les échanges (lecture seule) :']));
+  const t = el('table', { class: 'ro' }, [el('tr', {}, ['Protocole', 'Adresse privée', 'Port privé', 'Port public'].map(h => el('th', {}, [h])))]);
+  n.natTable.forEach(e => t.appendChild(el('tr', {}, [e.proto, e.priv, e.privPort, e.pubPort].map(x => el('td', {}, [String(x)])))));
+  if (!n.natTable.length) t.appendChild(el('tr', {}, [el('td', { colspan: 4, class: 'empty' }, ['(aucune)'])]));
+  body.appendChild(t);
+  const inner = tableDialog('Table natPat de ' + n.name, [{ k: 'proto', label: 'Protocole', type: 'select', options: [['TCP', 'TCP'], ['UDP', 'UDP']] }, { k: 'pubPort', label: 'Port public', size: 6 }, { k: 'ip', label: 'Serveur local (IP)' }, { k: 'port', label: 'Port local', size: 6 }], rows, {
+    newRow: () => ({ proto: 'TCP', pubPort: '80', ip: '', port: '80' }), note: 'Entrées « mapping » : rendent public un serveur local.',
+    onOk: rs => { for (const r of rs) { if (E.ip2int(r.ip) === null) return 'Adresse IP invalide : ' + r.ip; if (num(r.pubPort) === null || num(r.port) === null) return 'Port invalide.'; } n.maps = rs.map(r => ({ proto: r.proto, pubPort: Number(r.pubPort), ip: r.ip.trim(), port: Number(r.port) })); render(); }
+  });
+  const tb = inner.box.querySelector('.tbl'); tb.insertBefore(body, tb.firstChild);
+}
+function exchDialog(n) {
+  tableDialog('Échanges en cours — ' + n.name, [{ k: 'dir', label: 'Sens', ro: true, size: 8 }, { k: 'proto', label: 'Proto', ro: true, size: 6 }, { k: 'ip', label: 'Station distante', ro: true }, { k: 'port', label: 'Port / id distant', ro: true, size: 8 }, { k: 'lport', label: 'Port / id local', ro: true, size: 8 }, { k: 'state', label: 'État', ro: true, size: 9 }],
+    n.exch.map(e => Object.assign({}, e, { dir: e.dir === 'in' ? 'reçue' : 'émise' })), { readOnly: true });
+}
+function requestDialog(n) {
+  formDialog('Envoyer une requête — ' + n.name, [
+    { k: 'proto', label: 'Protocole', type: 'select', value: 'TCP', options: [['TCP', 'TCP'], ['UDP', 'UDP'], ['ICMP', 'ICMP']] },
+    { k: 'target', label: 'Adresse ou nom du destinataire', value: '' }, { k: 'port', label: 'Port de destination (ICMP : identifiant)', type: 'number', value: 80, min: 1, max: 65535 }
+  ], v => {
+    if (!v.target.trim()) return 'Indiquez le destinataire.'; if (v.port === null) return 'Port invalide.';
+    launch({ kind: 'req', node: n.id, proto: v.proto, target: v.target.trim(), port: v.port, demos: SIM.ipType !== 'none', arpDemo: SIM.arpDemo, staticArp: SIM.staticArp, mode: 'tr' }, SIM.ipType);
+  });
+}
+function replyDialog(n) {
+  const ins = n.exch.filter(e => e.dir === 'in' && e.state === 'reçue');
+  if (!ins.length) { toast(n.id, 'Aucune requête reçue en attente de réponse.', true); return; }
+  formDialog('Répondre à une requête — ' + n.name, [{ k: 'x', label: 'Requête', type: 'select', value: ins[0].id, options: ins.map(e => [e.id, e.proto + ' de ' + e.ip + ' (port/id ' + e.port + ') → local ' + e.lport]) }], v => {
+    launch({ kind: 'reply', node: n.id, exch: Number(v.x), demos: SIM.ipType !== 'none', arpDemo: SIM.arpDemo, mode: 'tr' }, SIM.ipType);
+  });
+}
+function pingDialog(n) {
+  formDialog('Ping — ' + n.name, [
+    { k: 'target', label: 'Adresse IP ou nom d\'hôte', value: lastPingTarget || '' },
+    { k: 'path', label: 'Trajet des paquets', type: 'select', value: SIM.pathMode, options: [['eth', 'Chemin Ethernet'], ['ip', 'Route IP']] }
+  ], v => {
+    if (!v.target.trim()) return 'Indiquez une adresse ou un nom.';
+    lastPingTarget = v.target.trim(); SIM.pathMode = v.path; syncBar();
+    launch({ kind: 'ping', node: n.id, target: lastPingTarget, pathMode: v.path, demos: SIM.ipType !== 'none', arpDemo: SIM.arpDemo && SIM.ipType !== 'none', autoArp: M.options.autoArp, mode: mode === 'tr' ? 'tr' : 'ip' }, SIM.ipType);
+  });
+}
+let lastPingTarget = '';
+
+/* ---------- lancement et lecture d'une simulation ---------- */
+function launch(params, type) {
+  if (player && !player.done) stopPlayback();
+  snapshot = E.clone(M); lastParams = { params: Object.assign({}, params), type };
+  const res = E.simulate(M, params);
+  render();
+  startPlayback(res, type, params);
+}
+function bis() {
+  if (!lastParams) return;
+  stopPlayback(); M = E.clone(snapshot); render();
+  snapshot = E.clone(M);
+  const res = E.simulate(M, lastParams.params); render(); startPlayback(res, lastParams.type, lastParams.params);
+}
+function startPlayback(res, type, params) {
+  $('#log').textContent = ''; $('#toasts').textContent = ''; collisionSeen = false; pointFlash = {};
+  player = { ev: res.events.slice().sort((a, b) => a.t - b.t), i: 0, T: 0, last: null, userPause: false, demo: null, queue: [], active: [], done: false, type, params, lastFrame: null, shown: false };
+  syncBar(); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+}
+function stopPlayback() {
+  cancelAnimationFrame(raf);
+  if (player) { player.done = true; closeDemoPanels(); }
+  player = null; gOver.textContent = ''; syncBar();
+}
+const speed = () => (SIM.slow && (player && (player.type === 'auto' || player.type === 'real' || player.type === 'none')) ? M.options.slow / 100 : 1);
+function tick(ts) {
+  const p = player; if (!p) return;
+  if (p.last == null) p.last = ts;
+  const dt = Math.min(ts - p.last, 60); p.last = ts;
+  if (!p.userPause && !p.demo) p.T += dt * speed();
+  while (p.i < p.ev.length && p.ev[p.i].t <= p.T) fire(p.ev[p.i++]);
+  if (p.demo) demoTick(dt);
+  drawOverlay();
+  const endT = p.active.reduce((m, s) => Math.max(m, s.t + s.dur + s.d), 0);
+  if (p.i >= p.ev.length && !p.demo && !p.queue.length && p.T > endT + 150) { p.done = true; gOver.textContent = ''; syncBar(); logLine('— fin de la simulation —'); render(); return; }
+  raf = requestAnimationFrame(tick);
+}
+function fire(e) {
+  const p = player;
+  switch (e.k) {
+    case 'seg': p.active.push(e); p.lastFrame = e.frame; showFrame(e.frame); break;
+    case 'demo': if (p.type === 'none') break; p.queue.push(e); if (!p.demo) nextDemo(); break;
+    case 'msg': toast(e.node, e.text, e.sticky); break;
+    case 'note': logLine(nodeName(e.node) + ' : ' + e.text); break;
+    case 'collision': collisionSeen = true; toast(null, 'Collision !', true); flashNode(e.where); break;
+    case 'flash': case 'arrive': pointFlash[e.pt] = p.T + 400; break;
+    case 'lost': toast(null, 'Trame perdue : point de connexion non relié ou câble incorrect.', true); break;
+    case 'drop': logLine('Trame corrompue éliminée par un switch store and forward.'); break;
+    case 'retry': logLine('Réémission après collision (essai ' + e.attempt + ').'); break;
+    case 'listen': break;
+  }
+}
+function flashNode() { }
+function drawOverlay() {
+  const p = player; gOver.textContent = '';
+  if (!p) return;
+  p.active = p.active.filter(s => p.T <= s.t + s.dur + s.d + 200);
+  for (const s of p.active) {
+    const c = M.cables.find(c => c.id === s.cable); if (!c) continue;
+    const a = ptPos(ptById(s.from)), b = ptPos(ptById(s.to));
+    const head = Math.max(0, Math.min(1, (p.T - s.t) / s.dur)), tail = Math.max(0, Math.min(1, (p.T - s.t - s.d) / s.dur));
+    if (p.T < s.t) continue;
+    const hx = a.x + (b.x - a.x) * head, hy = a.y + (b.y - a.y) * head, tx = a.x + (b.x - a.x) * tail, ty = a.y + (b.y - a.y) * tail;
+    const col = (s.xm && s.xm.corrupt && collisionSeen) ? '#e74c3c' : frameColor(s.frame);
+    const w = M.options.thick ? 8 : 5;
+    if (s.d > 0) gOver.appendChild(sv('line', { x1: tx, y1: ty, x2: hx, y2: hy, stroke: col, 'stroke-width': w + 1, 'stroke-linecap': 'round' }));
+    else if (tail < 1 || head < 1) {
+      gOver.appendChild(sv('rect', { x: hx - (M.options.thick ? 9 : 7), y: hy - (M.options.thick ? 6 : 5), width: M.options.thick ? 18 : 14, height: M.options.thick ? 12 : 10, rx: 2, fill: col, stroke: s.frame.vlan ? '#2980b9' : '#fff', 'stroke-width': s.frame.vlan ? 3 : 1 }));
+    }
+  }
+  for (const id in pointFlash) {
+    if (pointFlash[id] < p.T) { delete pointFlash[id]; continue; }
+    const pt = ptById(id); if (!pt) continue; const q = ptPos(pt);
+    gOver.appendChild(sv('circle', { cx: q.x, cy: q.y, r: 11, fill: 'none', stroke: '#2980b9', 'stroke-width': 3, opacity: .7 }));
+  }
+}
+function frameColor(f) {
+  if (!f) return '#2980b9';
+  if (f.vlan) return '#2980b9';
+  if (f.type === 'ARP') return '#27ae60';
+  if (f.type === 'IP') { const pk = f.payload; return pk && pk.proto === 'TCP' ? '#8e44ad' : pk && pk.proto === 'UDP' ? '#d35400' : '#c0392b'; }
+  return f.dst === E.BC ? '#e67e22' : '#2980b9';
+}
+function showFrame(f) {
+  const box = $('#frame'); box.textContent = '';
+  if (!f) return;
+  const ch = (label, val, tip, col) => el('span', { class: 'ch', title: tip, style: col ? { background: col } : {} }, [el('b', {}, [label]), ' ' + val]);
+  const pay = f.payload || {};
+  const parts = [];
+  const showEth = M.options.showFrame || f.type === 'ETH';
+  if (showEth) parts.push(ch('Destinataire', f.dst === E.BC ? 'diffusion' : f.dst, 'Adresse MAC de destination', '#fdebd0'), ch('Source', f.src, 'Adresse MAC de l\'émetteur', '#fdebd0'));
+  if (showEth && f.vlan) parts.push(ch('802.1q', 'vlan ' + f.vlan, 'Marque de vlan (trame entre deux ports 802.1q)', '#d6eaf8'));
+  if (f.type === 'ARP') parts.push(ch('ARP', pay.op === 'request' ? 'requête' : 'réponse', 'Protocole de résolution d\'adresses', '#d5f5e3'), ch('IP source', pay.sip, 'Adresse IP de l\'émetteur', '#d5f5e3'), ch('MAC source', pay.smac, '', '#d5f5e3'), ch('IP cible', pay.tip, 'Adresse IP recherchée', '#d5f5e3'), ch('MAC cible', pay.tmac, '', '#d5f5e3'));
+  else if (f.type === 'IP') {
+    parts.push(ch('IP source', pay.src, 'Adresse IP de l\'émetteur', '#f5eef8'), ch('IP destination', pay.dst, 'Adresse IP du destinataire', '#f5eef8'), ch('TTL', pay.ttl, 'Nombre de sauts restants', '#f5eef8'), ch(pay.proto, pay.proto === 'ICMP' ? (pay.icmpType || '') + ' #' + (pay.id || '') : pay.sport + ' → ' + pay.dport, 'Protocole de transport', '#f5eef8'));
+  } else parts.push(ch('Type', 'données', 'Trame de données', '#eaf2f8'));
+  parts.forEach(x => box.appendChild(x));
+}
+
+/* ---------- mini-démos ---------- */
+const demoLayer = el('div', { id: 'demos' });
+function closeDemoPanels() { demoLayer.textContent = ''; if (player) { player.demo = null; player.queue = []; } }
+function nextDemo() {
+  const p = player; if (!p) return;
+  const e = p.queue.shift(); if (!e) { p.demo = null; return; }
+  const n = E.nodeById(M, e.node); if (!n) { nextDemo(); return; }
+  const type = p.type === 'manual' ? 'manual' : p.type === 'step' ? 'step' : 'auto';
+  const steps = e.inters.concat([e.fin]);
+  const d = { e, type, steps, shown: 1, acc: 0, paused: false, done: new Set(), errors: 0, panel: null, finished: false };
+  p.demo = d;
+  const panel = el('div', { class: 'demo' });
+  const b = nodeBox(n);
+  panel.style.left = Math.min(Math.max(10, n.x + b.w / 2 + 8), 1500 - 330) + 'px'; panel.style.top = Math.max(10, n.y - 30) + 'px';
+  d.panel = panel; demoLayer.appendChild(panel); demoRender();
+}
+function demoRender() {
+  const p = player; if (!p || !p.demo) return; const d = p.demo; const e = d.e;
+  d.panel.textContent = '';
+  d.panel.appendChild(el('div', { class: 'demo-t' }, [e.title]));
+  const list = el('div', { class: 'demo-l' });
+  if (d.type === 'manual') {
+    e.inters.forEach(s => { if (d.done.has(s)) list.appendChild(el('div', { class: 'st ok' }, ['✓ ' + s])); });
+    if (d.finished) list.appendChild(el('div', { class: 'st ok fin' }, ['✓ ' + e.fin]));
+    d.panel.appendChild(list);
+    if (!d.finished) {
+      d.panel.appendChild(el('div', { class: 'hint' }, ['Quelle est l\'action suivante ? (« … » : étape intermédiaire, « → » : fin du traitement)']));
+      const pool = shuffle(e.pool.filter(s => !d.done.has(s)), e.node + e.title);
+      const ch = el('div', { class: 'choices' });
+      pool.forEach(s => ch.appendChild(el('button', { class: 'btn ch', onclick: () => demoChoose(s) }, [s])));
+      d.panel.appendChild(ch);
+      if (d.msg) d.panel.appendChild(el('div', { class: d.msg.ok ? 'fb ok' : 'fb bad' }, [d.msg.t]));
+    }
+    d.panel.appendChild(el('div', { class: 'demo-b' }, [el('button', { class: 'btn', onclick: demoStop, title: 'Arrêter la démonstration (Échap)' }, ['⏹ Stop'])]));
+    return;
+  }
+  d.steps.slice(0, d.shown).forEach((s, i) => list.appendChild(el('div', { class: 'st' + (i === d.steps.length - 1 ? ' fin' : '') + (i === d.shown - 1 ? ' cur' : '') }, [s])));
+  d.panel.appendChild(list);
+  const bar = el('div', { class: 'demo-b' });
+  bar.appendChild(el('button', { class: 'btn', title: 'Stop', onclick: demoStop }, ['⏹']));
+  if (d.type === 'auto') bar.appendChild(el('button', { class: 'btn', title: 'Pause', onclick: () => { d.paused = !d.paused; demoRender(); } }, [d.paused ? '⏸ en pause' : '⏸']));
+  else bar.appendChild(el('button', { class: 'btn', title: 'Reculer', onclick: demoBack }, ['◀']));
+  bar.appendChild(el('button', { class: 'btn', title: 'Rembobiner', onclick: () => { d.shown = 1; d.acc = 0; demoRender(); } }, ['⏮']));
+  bar.appendChild(el('button', { class: 'btn pri', title: 'Lire (Entrée)', onclick: demoPlay }, ['▶']));
+  d.panel.appendChild(bar);
+}
+function shuffle(arr, seed) {
+  let h = 0; for (const c of String(seed)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { h = (h * 1103515245 + 12345) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a;
+}
+function demoChoose(s) {
+  const d = player && player.demo; if (!d) return; const e = d.e;
+  if (e.inters.includes(s)) { d.done.add(s); d.msg = { ok: true, t: 'Correct.' }; }
+  else if (s === e.fin) {
+    if (e.inters.every(x => d.done.has(x))) { d.finished = true; d.msg = { ok: true, t: 'Correct.' }; demoRender(); setTimeout(demoEnd, 700); return; }
+    d.msg = { ok: false, t: 'Il reste des étapes intermédiaires à réaliser avant de terminer le traitement.' };
+  } else d.msg = { ok: false, t: 'Incorrect : ce n\'est pas ce que fait ce composant ici.' };
+  demoRender();
+}
+function demoTick(dt) {
+  const d = player.demo; if (!d || d.type !== 'auto' || d.paused || d.finished) return;
+  d.acc += dt; if (d.acc < M.options.demoWait * (SIM.slow ? 1 / Math.max(.3, M.options.slow / 100) : 1)) return;
+  d.acc = 0;
+  if (d.shown < d.steps.length) { d.shown++; demoRender(); } else { d.finished = true; setTimeout(demoEnd, 500); }
+}
+function demoPlay() { const d = player && player.demo; if (!d || d.type === 'manual') return; if (d.type === 'auto') { d.paused = false; d.acc = 1e9; } else if (d.shown < d.steps.length) { d.shown++; demoRender(); } else demoEnd(); }
+function demoBack() { const d = player && player.demo; if (d && d.shown > 1) { d.shown--; demoRender(); } }
+function demoStop() { demoEnd(); }
+function demoEnd() { const p = player; if (!p || !p.demo) return; p.demo.panel.remove(); p.demo = null; nextDemo(); }
+
+/* ---------- barre de commandes ---------- */
+const bar = el('div', { id: 'bar' });
+function syncToolbar() { document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.getAttribute('data-tool') === tool)); render(); }
+function setMode(m) {
+  if (player) stopPlayback();
+  mode = m; cableFrom = null; tool = 'select'; sel.clear();
+  document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.getAttribute('data-mode') === m));
+  if (m !== 'design') { E.computeStp(M); if (m === 'eth' && M.options.announce) announce(); if (m === 'ip' && M.options.autoArp) E.fillArp(M); }
+  syncBar(); render();
+}
+function announce() {
+  M.nodes.filter(n => n.type === 'station' && n.on).forEach(n => n.nics.forEach((c, i) => { if (E.peerOf(M, n.id + ':n' + i)) E.simulate(M, { kind: 'eth', from: n.id + ':n' + i, dst: E.BC, demos: false, mode: 'eth' }); }));
+}
+function syncBar() {
+  bar.textContent = '';
+  const running = player && !player.done;
+  if (mode === 'design') {
+    [['select', '➤', 'Flèche : sélectionner / déplacer'], ['cable', '🔌', 'Câble'], ['station', '🖥', 'Station'], ['hub', '▭', 'Hub'], ['switch', '▤', 'Switch'], ['internet', '☁', 'Internet']].forEach(([t, ic, tip]) =>
+      bar.appendChild(el('button', { class: 'btn tool' + (tool === t ? ' on' : ''), 'data-tool': t, title: tip, onclick: () => { tool = t; cableFrom = null; syncToolbar(); } }, [ic + ' ' + tip.split(' :')[0]])));
+    bar.appendChild(el('span', { class: 'sp' }));
+    bar.appendChild(el('button', { class: 'btn', onclick: () => { if (sel.size) deleteSelection(); else toast(null, 'Sélectionnez des composants à supprimer.'); } }, ['🗑 Supprimer la sélection']));
+    return;
+  }
+  const isEth = mode === 'eth';
+  const typeSel = el('select', { onchange: e => { if (isEth) SIM.ethType = e.target.value; else SIM.ipType = e.target.value; syncBar(); } },
+    (isEth ? [['auto', 'Automatique'], ['step', 'Pas à pas'], ['manual', 'Manuel'], ['real', 'Trame réelle']] : [['auto', 'Automatique'], ['step', 'Pas à pas'], ['none', 'Pas de démonstration'], ['manual', 'Manuel']])
+      .map(o => el('option', { value: o[0], selected: o[0] === (isEth ? SIM.ethType : SIM.ipType) }, [o[1]])));
+  bar.appendChild(el('label', { class: 'inl' }, ['Simulation ', typeSel]));
+  const t = isEth ? SIM.ethType : SIM.ipType;
+  const chk = (label, key, enabled) => el('label', { class: 'inl' + (enabled ? '' : ' dis') }, [el('input', { type: 'checkbox', checked: !!SIM[key], disabled: !enabled, onchange: e => { SIM[key] = e.target.checked; } }), ' ' + label]);
+  if (isEth) { bar.append(chk('Full duplex', 'full', t === 'real'), chk('Ralenti', 'slow', t === 'auto' || t === 'real'), chk('Message réception', 'msgRecv', true)); }
+  else {
+    bar.append(chk('Démo ARP', 'arpDemo', t !== 'none'), chk('Ralenti', 'slow', t === 'auto' || t === 'none'));
+    bar.appendChild(el('label', { class: 'inl' }, ['Trajet ', el('select', { onchange: e => { SIM.pathMode = e.target.value; } }, [['eth', 'Chemin Ethernet'], ['ip', 'Route IP']].map(o => el('option', { value: o[0], selected: SIM.pathMode === o[0] }, [o[1]])))]));
+    bar.append(chk('Entrées ARP statiques', 'staticArp', true));
+    bar.appendChild(el('button', { class: 'btn', onclick: () => { E.fillArp(M, { static: SIM.staticArp }); render(); toast(null, 'Caches ARP remplis.'); } }, ['Remplir les caches ARP']));
+    bar.appendChild(el('button', { class: 'btn', onclick: () => { M.nodes.forEach(n => { if (n.type === 'station') n.arp = []; }); render(); toast(null, 'Caches ARP vidés.'); } }, ['Vider les caches ARP']));
+    if (mode === 'tr') bar.appendChild(el('button', { class: 'btn', onclick: () => { M.nodes.forEach(n => { if (n.type === 'station') { n.exch = []; n.natTable = []; } }); render(); toast(null, 'Échanges en cours supprimés.'); } }, ['Supprimer les échanges']));
+  }
+  bar.appendChild(el('span', { class: 'sp' }));
+  bar.appendChild(el('button', { class: 'btn', title: 'Choisir les nœuds qui affichent des mini-démos', onclick: tracedDialog }, ['🔍 Nœuds tracés']));
+  bar.appendChild(el('button', { class: 'btn', disabled: !running || (player && player.demo), title: 'Pause / reprise', onclick: () => { if (player) { player.userPause = !player.userPause; syncBar(); } } }, [player && player.userPause ? '▶ Reprise' : '⏸ Pause']));
+  bar.appendChild(el('button', { class: 'btn', disabled: !running && !lastParams, title: running ? 'Arrêter la simulation' : 'Rejouer la dernière simulation', onclick: () => { if (running) stopPlayback(); else bis(); } }, [running ? '⏹ Stop' : '↻ Bis']));
+}
+function tracedDialog() {
+  const body = el('div', { class: 'form' });
+  const cks = M.nodes.map(n => { const c = el('input', { type: 'checkbox', checked: M.traced[n.id] !== false }); body.appendChild(el('label', { class: 'chk' }, [c, ' ' + n.name + ' (' + ({ station: 'station', hub: 'hub', switch: 'switch', internet: 'Internet' }[n.type]) + ')'])); return [n, c]; });
+  dialog('Nœuds tracés', body, [{ label: 'Annuler' }, { label: 'OK', primary: true, fn: () => { cks.forEach(([n, c]) => { M.traced[n.id] = c.checked; }); persist(); } }]);
+}
+
+/* ---------- fichier / options ---------- */
+function optionsDialog() {
+  const body = el('div', { class: 'opts' }); const inputs = {};
+  OPT_SCHEMA.forEach(([title, items]) => {
+    body.appendChild(el('h4', {}, [title]));
+    items.forEach(([k, label, type, a, b]) => {
+      let inp;
+      if (type === 'bool') inp = el('input', { type: 'checkbox', checked: !!M.options[k] });
+      else if (type === 'sel') inp = el('select', {}, a.map(o => el('option', { value: o[0], selected: String(o[0]) === String(M.options[k]) }, [o[1]])));
+      else inp = el('input', { type: 'number', value: M.options[k], min: a, max: b, step: type === 'float' ? '0.1' : '1' });
+      inputs[k] = [inp, type];
+      const reset = el('button', { class: 'rst', title: 'Valeur par défaut', onclick: () => { const d = E.OPT_DEFAULTS[k]; if (type === 'bool') inp.checked = !!d; else inp.value = d; } }, ['↺']);
+      body.appendChild(el('div', { class: 'orow' }, [reset, el('span', {}, [label]), inp]));
+    });
+  });
+  const err = el('div', { class: 'err' }); body.appendChild(err);
+  const read = () => {
+    const o = {};
+    for (const k in inputs) { const [inp, type] = inputs[k]; o[k] = type === 'bool' ? inp.checked : type === 'sel' ? (isNaN(Number(inp.value)) ? inp.value : Number(inp.value)) : Number(inp.value); if (type !== 'bool' && type !== 'sel' && (inp.value === '' || isNaN(o[k]))) return null; }
+    return o;
+  };
+  dialog('Options', body, [
+    { label: 'Valeurs par défaut', keep: true, fn: () => { for (const k in inputs) { const [inp, type] = inputs[k]; const d = E.OPT_DEFAULTS[k]; if (type === 'bool') inp.checked = !!d; else inp.value = d; } return false; } },
+    { label: 'Annuler' },
+    { label: 'OK', primary: true, fn: () => { const o = read(); if (!o) { err.textContent = 'Une valeur est invalide.'; return false; } Object.assign(M.options, o); try { localStorage.setItem('simres.options', JSON.stringify(M.options)); } catch (e) { /* ignoré */ } SIM.pathMode = M.options.pathDefault; render(); syncBar(); } }
+  ], { wide: true });
+}
+function exportDialog() {
+  const text = JSON.stringify(M);
+  const d = formDialog('Enregistrer le réseau', [{ k: 't', label: 'Contenu du fichier réseau (JSON) — copiez-le dans un fichier .json', type: 'textarea', rows: 14, value: text }], () => { }, { okLabel: 'Fermer', wide: true });
+  d.box.querySelector('.dlg-b').insertBefore(el('button', { class: 'btn', onclick: () => { const t = d.box.querySelector('textarea'); t.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { /* ignoré */ } if (!ok && navigator.clipboard) navigator.clipboard.writeText(t.value).catch(() => { }); toast(null, 'Copié dans le presse-papiers.'); } }, ['Copier']), d.box.querySelector('.dlg-b').firstChild);
+}
+function importDialog() {
+  const fi = el('input', { type: 'file', accept: '.json,.txt' });
+  const ta = el('textarea', { rows: 10, spellcheck: 'false', placeholder: 'ou collez ici le contenu du fichier réseau (JSON)…' });
+  const err = el('div', { class: 'err' });
+  fi.addEventListener('change', () => { const f = fi.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ta.value = r.result; }; r.readAsText(f); });
+  dialog('Ouvrir un réseau', el('div', { class: 'form' }, [fi, ta, err]), [{ label: 'Annuler' }, { label: 'Ouvrir', primary: true, fn: () => { try { const o = JSON.parse(ta.value); if (!Array.isArray(o.nodes) || !Array.isArray(o.cables)) throw new Error('format'); loadModelObj(o); setMode('design'); } catch (e) { err.textContent = 'Fichier invalide : ce n\'est pas un réseau du simulateur.'; return false; } } }], { wide: true });
+}
+function imageDialog() {
+  const clone = svg.cloneNode(true); clone.setAttribute('xmlns', SVGNS);
+  const xs = M.nodes.map(n => n.x), ys = M.nodes.map(n => n.y);
+  const x0 = Math.max(0, Math.min.apply(null, xs.concat([9999])) - 130), y0 = Math.max(0, Math.min.apply(null, ys.concat([9999])) - 80), x1 = Math.max.apply(null, xs.concat([0])) + 130, y1 = Math.max.apply(null, ys.concat([0])) + 120;
+  const W = Math.max(200, x1 - x0), H = Math.max(150, y1 - y0);
+  clone.setAttribute('viewBox', `${x0} ${y0} ${W} ${H}`); clone.setAttribute('width', W); clone.setAttribute('height', H);
+  clone.querySelectorAll('[class]').forEach(e => e.removeAttribute('class'));
+  const s = new XMLSerializer().serializeToString(clone);
+  const img = el('img', { src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<?xml version="1.0"?>' + s), style: { maxWidth: '100%', background: '#fff', border: '1px solid #ccd' } });
+  dialog('Schéma du réseau', el('div', { class: 'form' }, [el('div', { class: 'hint' }, ['Clic droit sur l\'image pour l\'enregistrer ou la copier.']), img]), [{ label: 'Fermer', primary: true }], { wide: true });
+}
+function newNetwork() { loadModelObj(Object.assign(E.newModel(), { options: Object.assign({}, M.options) })); setMode('design'); }
+
+/* ---------- réseau d'exemple ---------- */
+function example() {
+  const m = E.newModel(); Object.assign(m.options, M.options);
+  const conn = (a, b, t) => m.cables.push({ id: 'c' + E.uid(m), a, b, type: t || E.suggestCableType(m, a, b), len: 10 });
+  const pc1 = E.addStation(m, 130, 270), pc2 = E.addStation(m, 300, 270), sw1 = E.addSwitch(m, 215, 130);
+  const rt = E.addStation(m, 560, 130), inet = E.addInternet(m, 860, 130), srv = E.addStation(m, 1160, 130);
+  const h = E.addHub(m, 560, 330), pc3 = E.addStation(m, 480, 470), web = E.addStation(m, 660, 470);
+  pc1.name = 'PC1'; pc2.name = 'PC2'; pc3.name = 'PC3'; web.name = 'Serveur'; rt.name = 'Routeur'; srv.name = 'Dupont'; sw1.name = 'Switch1'; h.name = 'Hub1';
+  pc1.nics[0].ip = '192.168.1.10'; pc2.nics[0].ip = '192.168.1.11'; pc1.gateway = pc2.gateway = '192.168.1.254';
+  rt.nics[0].ip = '192.168.1.254'; rt.nics.push({ mac: E.newMac(m), ip: '192.168.2.254', mask: '255.255.255.0' }); rt.remote = true; rt.routing = true; rt.nat = { on: true, pub: 2 };
+  pc3.nics[0].ip = '192.168.2.10'; web.nics[0].ip = '192.168.2.20'; pc3.gateway = web.gateway = '192.168.2.254';
+  web.listen.push({ proto: 'TCP', port: 9090 }); rt.maps.push({ proto: 'TCP', pubPort: 9090, ip: '192.168.2.20', port: 9090 });
+  srv.nics = []; srv.remote = true; srv.listen.push({ proto: 'TCP', port: 80 }); pc1.hosts.push({ name: 'dupont', ip: '90.20.0.11' });
+  conn(pc1.id + ':n0', sw1.id + ':p0'); conn(pc2.id + ':n0', sw1.id + ':p1'); conn(rt.id + ':n0', sw1.id + ':p2');
+  conn(rt.id + ':n1', h.id + ':p0'); conn(pc3.id + ':n0', h.id + ':p1'); conn(web.id + ':n0', h.id + ':p2');
+  conn(rt.id + ':r0', inet.id + ':f0'); conn(srv.id + ':r0', inet.id + ':f2');
+  loadModelObj(m); setMode('design');
+}
+
+/* ---------- assemblage de la page ---------- */
+function init() {
+  const root = $('#app');
+  const modes = el('div', { class: 'modes' }, [['design', '✏ Conception'], ['eth', '🔗 Ethernet'], ['ip', '🌐 IP'], ['tr', '📦 Transport']].map(([m, l]) => el('button', { class: 'btn mode' + (m === 'design' ? ' on' : ''), 'data-mode': m, onclick: () => setMode(m) }, [l])));
+  const file = el('div', { class: 'file' }, [
+    el('button', { class: 'btn', onclick: newNetwork }, ['Nouveau']), el('button', { class: 'btn', onclick: importDialog }, ['Ouvrir…']), el('button', { class: 'btn', onclick: exportDialog }, ['Enregistrer…']),
+    el('button', { class: 'btn', onclick: imageDialog }, ['Schéma (image)']), el('button', { class: 'btn', onclick: optionsDialog }, ['⚙ Options']), el('button', { class: 'btn', onclick: example }, ['Exemple'])]);
+  const stage = el('div', { id: 'stage' }, [svg, demoLayer, el('div', { id: 'toasts' })]);
+  root.append(el('header', {}, [el('h1', {}, ['Simulateur réseau']), modes, file]), bar, stage, el('div', { id: 'hint' }), el('div', { class: 'bottom' }, [el('div', { id: 'frameWrap' }, [el('div', { class: 'lab' }, ['Trame / paquet en cours']), el('div', { id: 'frame' })]), el('div', { id: 'logWrap' }, [el('div', { class: 'lab' }, ['Journal']), el('div', { id: 'log' })])]), menuEl, modalRoot);
+  try { const o = localStorage.getItem('simres.options'); if (o) Object.assign(M.options, JSON.parse(o)); } catch (e) { /* ignoré */ }
+  let loaded = false;
+  try { const s = localStorage.getItem('simres.model'); if (s) { loadModelObj(JSON.parse(s)); loaded = M.nodes.length > 0; } } catch (e) { /* ignoré */ }
+  SIM.pathMode = M.options.pathDefault;
+  if (!loaded) example();
+  syncBar(); render();
+}
+window.SimUI = { init, get model() { return M; }, setMode, launch, SIM, example, newNetwork, loadModelObj, player: () => player };
+document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

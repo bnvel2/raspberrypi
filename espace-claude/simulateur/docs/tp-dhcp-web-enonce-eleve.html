@@ -1,0 +1,357 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TP Packet Tracer : DHCP et serveur Web distant</title><style>body{max-width:900px;margin:0 auto;padding:20px;font:16px/1.6 system-ui,sans-serif}table{border-collapse:collapse;display:block;overflow-x:auto}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#eef2fa}pre{background:#0f1722;color:#d7e0ee;padding:12px;border-radius:8px;overflow-x:auto}code{font-family:ui-monospace,Menlo,monospace}@media print{pre{white-space:pre-wrap}}</style></head><body><h1>TP Packet Tracer : DHCP et serveur Web distant</h1>
+<p><strong>Énoncé élève</strong> – Durée prévue : 2 heures – Logiciel : Cisco Packet Tracer</p>
+<p>Nom : <strong><em>_</em></strong><strong><em>_</em>  Prénom : </strong><strong><em>_</em></strong><strong><em>  Classe : </em></strong><strong><em>  Date : </em></strong>_____</p>
+<h2>1. Contexte</h2>
+<p>Une petite entreprise possède deux sites reliés par une liaison point à point entre deux routeurs. Sur le <strong>site A</strong>, les postes de travail doivent recevoir automatiquement leur configuration IP grâce à un <strong>serveur DHCP</strong>. Sur le <strong>site B</strong> se trouve un <strong>serveur Web</strong> (et un serveur DNS) que les postes du site A doivent pouvoir consulter.</p>
+<p>Votre mission : construire la maquette, la configurer, puis prouver qu'elle fonctionne.</p>
+<h2>2. Objectifs</h2>
+<ul>
+<li>Configurer un serveur DHCP (pool d'adresses, passerelle, DNS).</li>
+<li>Configurer deux routeurs et le routage statique entre deux réseaux.</li>
+<li>Configurer un serveur Web et un serveur DNS.</li>
+<li>Tester et diagnostiquer la connectivité avec <code>ping</code>, <code>ipconfig</code> et le navigateur.</li>
+<li>Observer un échange DHCP en mode Simulation.</li>
+</ul>
+<h2>3. Matériel à utiliser</h2>
+<ul>
+<li>2 routeurs Cisco 2911 (ou 1941)</li>
+<li>2 commutateurs 2960</li>
+<li>3 postes clients (PC0, PC1 et un Laptop)</li>
+<li>3 serveurs : DHCP, Web, DNS</li>
+<li>Câbles droits (postes, serveurs et commutateurs vers routeurs) et un câble croisé entre les deux routeurs</li>
+</ul>
+<h2>4. Schéma logique</h2>
+<pre><code>[PC0]──┐
+[PC1]──┼─[Switch0]──[R1]══(10.0.0.0/30)══[R2]──[Switch1]──[Serveur Web]
+[Laptop]┘     │                                             [Serveur DNS]
+        [Serveur DHCP]
+</code></pre>
+<h2>5. Plan d'adressage</h2>
+<table>
+<thead>
+<tr>
+<th>Équipement</th>
+<th>Interface</th>
+<th>Adresse IP</th>
+<th>Masque</th>
+<th>Passerelle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>G0/0 (LAN A)</td>
+<td>192.168.10.1</td>
+<td>255.255.255.0</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>G0/1 (WAN)</td>
+<td>10.0.0.1</td>
+<td>255.255.255.252</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>G0/1 (WAN)</td>
+<td>10.0.0.2</td>
+<td>255.255.255.252</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>G0/0 (LAN B)</td>
+<td>172.16.0.1</td>
+<td>255.255.255.0</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Serveur DHCP</td>
+<td>NIC</td>
+<td>192.168.10.2</td>
+<td>255.255.255.0</td>
+<td>192.168.10.1</td>
+</tr>
+<tr>
+<td>Serveur Web</td>
+<td>NIC</td>
+<td>172.16.0.10</td>
+<td>255.255.255.0</td>
+<td>172.16.0.1</td>
+</tr>
+<tr>
+<td>Serveur DNS</td>
+<td>NIC</td>
+<td>172.16.0.11</td>
+<td>255.255.255.0</td>
+<td>172.16.0.1</td>
+</tr>
+<tr>
+<td>PC0, PC1, Laptop</td>
+<td>NIC</td>
+<td><strong>DHCP</strong></td>
+<td><strong>DHCP</strong></td>
+<td><strong>DHCP</strong></td>
+</tr>
+</tbody>
+</table>
+<h2>6. Travail demandé</h2>
+<h3>Partie A – Montage (20 min)</h3>
+<ol>
+<li>Placez et nommez tous les équipements selon le schéma (R1, R2, Switch0, Switch1, DHCP, WEB, DNS, PC0, PC1, Laptop).</li>
+<li>Câblez la maquette. Vérifiez que tous les liens passent au vert (patientez quelques secondes).</li>
+<li><strong>Question A1</strong> : pourquoi utilise-t-on un câble croisé entre les deux routeurs ?</li>
+</ol>
+<p>Réponse : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<h3>Partie B – Configuration des routeurs (25 min)</h3>
+<ol>
+<li>Sur chaque routeur, donnez un nom (<code>hostname</code>), configurez les deux interfaces selon le plan d'adressage et activez-les.</li>
+<li>Ajoutez sur chaque routeur la <strong>route statique</strong> permettant d'atteindre le réseau de l'autre site.</li>
+<li>Sauvegardez la configuration.</li>
+<li>Depuis R1, testez <code>ping 10.0.0.2</code>.</li>
+<li><strong>Question B1</strong> : écrivez la commande de route statique saisie sur R1 et sur R2.</li>
+</ol>
+<p>R1 : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<p>R2 : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__
+6. <strong>Question B2</strong> : que signifie le masque /30 ? Combien d'hôtes peut-on adresser ?</p>
+<p>Réponse : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<h3>Partie C – Configuration des serveurs (30 min)</h3>
+<ol>
+<li><strong>Serveur DHCP</strong> : configurez son adresse IP en statique (<em>Desktop &gt; IP Configuration</em>). Dans <em>Services &gt; DHCP</em>, activez le service et modifiez le pool par défaut (non renommable) <code>serverPool</code> :</li>
+<li>passerelle par défaut : adresse de R1 côté LAN A</li>
+<li>serveur DNS : adresse du serveur DNS</li>
+<li>première adresse : 192.168.10.10</li>
+<li>masque : 255.255.255.0</li>
+<li>nombre maximum d'utilisateurs : 50</li>
+<li>n'oubliez pas de valider avec <strong>Save</strong> ou <strong>Add</strong>.</li>
+<li><strong>Serveur Web</strong> : configurez son adresse IP en statique, activez le service HTTP et personnalisez la page <code>index.html</code> (mettez votre nom dedans).</li>
+<li><strong>Serveur DNS</strong> : configurez son adresse IP en statique, activez le service DNS et ajoutez un enregistrement de type A : <code>www.monsite.local</code> vers l'adresse du serveur Web.</li>
+<li><strong>Question C1</strong> : pourquoi les serveurs ont-ils une adresse statique et non une adresse DHCP ?</li>
+</ol>
+<p>Réponse : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<h3>Partie D – Configuration des clients (10 min)</h3>
+<ol>
+<li>Sur chaque poste client : <em>Desktop &gt; IP Configuration &gt; DHCP</em>.</li>
+<li>Relevez la configuration obtenue :</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Poste</th>
+<th>Adresse IP</th>
+<th>Masque</th>
+<th>Passerelle</th>
+<th>DNS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC0</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC1</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Laptop</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li><strong>Question D1</strong> : les trois adresses sont-elles identiques ? Pourquoi ?</li>
+</ol>
+<p>Réponse : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<h3>Partie E – Tests et validation (20 min)</h3>
+<p>Depuis PC0, réalisez les tests suivants et notez le résultat (réussi / échec) :</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ping</code> vers la passerelle (R1)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ping</code> vers 10.0.0.2 (R2)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ping</code> vers le serveur Web par son adresse IP</td>
+<td></td>
+</tr>
+<tr>
+<td>Navigateur : <code>http://</code> suivi de l'adresse IP du serveur Web</td>
+<td></td>
+</tr>
+<tr>
+<td>Navigateur : <code>http://www.monsite.local</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Sur R1, exécutez <code>show ip route</code> et <code>show ip interface brief</code>. Recopiez la ligne correspondant à la route vers le LAN B :</p>
+<hr />
+<p><strong>Faites valider votre maquette par l'enseignant</strong> une fois les tests réussis. Visa : <strong><em>_</em></strong>_____</p>
+<h3>Partie F – Observation en mode Simulation (15 min)</h3>
+<ol>
+<li>Passez en mode <strong>Simulation</strong>, filtrez sur les protocoles <strong>DHCP</strong>, puis <strong>HTTP</strong> (et DNS si configuré).</li>
+<li>Sur un poste, relâchez puis redemandez son adresse (<em>IP Configuration</em> : repassez en Static puis en DHCP).</li>
+<li>Observez les paquets et complétez :</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Étape DHCP</th>
+<th>Nom du message</th>
+<th>Adresse IP source</th>
+<th>Adresse IP destination</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li><strong>Question F1</strong> : pourquoi le premier message est-il envoyé en diffusion (broadcast) ?</li>
+</ol>
+<p>Réponse : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</p>
+<h3>Partie G – Dépannage (10 min)</h3>
+<p>L'enseignant introduit une panne dans votre maquette (ou vous en provoquez une volontairement). Décrivez la démarche suivie :</p>
+<ul>
+<li>Symptôme observé : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</li>
+<li>Tests effectués : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</li>
+<li>Cause trouvée : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</li>
+<li>Correction apportée : <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>__</li>
+</ul>
+<h2>7. Questions de synthèse</h2>
+<ol>
+<li>Que se passe-t-il si on supprime la route statique sur R2 ? Le ping depuis PC0 vers le serveur Web aboutit-il ? Justifiez.</li>
+<li>Comment un routeur décide-t-il de la direction d'un paquet destiné à 172.16.0.10 ?</li>
+<li>Pourquoi la plage DHCP commence-t-elle à 192.168.10.10 ?</li>
+<li>Quel est l'intérêt du DNS par rapport à l'utilisation directe de l'adresse IP ?</li>
+</ol>
+<h2>8. Pour aller plus loin (bonus)</h2>
+<ul>
+<li>Déplacez le serveur DHCP dans le LAN B et faites fonctionner la distribution d'adresses dans le LAN A grâce à la commande <code>ip helper-address</code> sur R1.</li>
+<li>Remplacez le serveur DHCP par un service DHCP configuré directement sur R1 (<code>ip dhcp pool</code>, <code>ip dhcp excluded-address</code>).</li>
+</ul>
+<h2>9. Grille d'évaluation (sur 20)</h2>
+<table>
+<thead>
+<tr>
+<th>Compétence</th>
+<th>Critère</th>
+<th>Points</th>
+<th>Obtenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Montage</td>
+<td>Équipements corrects, nommés et câblés</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Routeurs</td>
+<td>Interfaces configurées et actives</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Routeurs</td>
+<td>Routes statiques correctes</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Serveur DHCP</td>
+<td>Adresse statique et pool correctement renseigné</td>
+<td>3</td>
+<td></td>
+</tr>
+<tr>
+<td>Serveur Web / DNS</td>
+<td>Services actifs, page personnalisée, enregistrement DNS</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Clients</td>
+<td>Adresses obtenues en DHCP</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Ping et accès Web réussis (IP et nom)</td>
+<td>3</td>
+<td></td>
+</tr>
+<tr>
+<td>Observation</td>
+<td>Tableau DORA et question F1</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Questions</td>
+<td>Réponses justes et argumentées (A1, B1, B2, C1, D1, synthèse)</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>Dépannage</td>
+<td>Démarche méthodique</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td><strong>20</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Bonus : jusqu'à +2 points pour la partie « Pour aller plus loin ».</p>
+<p><strong>Remarques de l'enseignant :</strong></p></body></html>

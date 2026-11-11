@@ -1,0 +1,419 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TP Packet Tracer : DHCP et serveur Web distant</title><style>body{max-width:900px;margin:0 auto;padding:20px;font:16px/1.6 system-ui,sans-serif}table{border-collapse:collapse;display:block;overflow-x:auto}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#eef2fa}pre{background:#0f1722;color:#d7e0ee;padding:12px;border-radius:8px;overflow-x:auto}code{font-family:ui-monospace,Menlo,monospace}@media print{pre{white-space:pre-wrap}}</style></head><body><h1>TP Packet Tracer : DHCP et serveur Web distant</h1>
+<p><strong>Corrigé enseignant</strong> – Ne pas distribuer aux élèves</p>
+<h2>1. Rappel de la maquette</h2>
+<table>
+<thead>
+<tr>
+<th>Équipement</th>
+<th>Interface</th>
+<th>Adresse IP</th>
+<th>Masque</th>
+<th>Passerelle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>G0/0 (LAN A)</td>
+<td>192.168.10.1</td>
+<td>255.255.255.0</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>G0/1 (WAN)</td>
+<td>10.0.0.1</td>
+<td>255.255.255.252</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>G0/1 (WAN)</td>
+<td>10.0.0.2</td>
+<td>255.255.255.252</td>
+<td>–</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>G0/0 (LAN B)</td>
+<td>172.16.0.1</td>
+<td>255.255.255.0</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Serveur DHCP</td>
+<td>NIC</td>
+<td>192.168.10.2</td>
+<td>255.255.255.0</td>
+<td>192.168.10.1</td>
+</tr>
+<tr>
+<td>Serveur Web</td>
+<td>NIC</td>
+<td>172.16.0.10</td>
+<td>255.255.255.0</td>
+<td>172.16.0.1</td>
+</tr>
+<tr>
+<td>Serveur DNS</td>
+<td>NIC</td>
+<td>172.16.0.11</td>
+<td>255.255.255.0</td>
+<td>172.16.0.1</td>
+</tr>
+<tr>
+<td>PC0, PC1, Laptop</td>
+<td>NIC</td>
+<td>DHCP</td>
+<td>DHCP</td>
+<td>DHCP</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Partie A – Montage</h2>
+<p><strong>Câblage attendu :</strong></p>
+<ul>
+<li>PC0, PC1, Laptop et Serveur DHCP vers Switch0 (câbles droits, ports FastEthernet).</li>
+<li>Switch0 vers R1 G0/0 (câble droit).</li>
+<li>R1 G0/1 vers R2 G0/1 (câble croisé).</li>
+<li>R2 G0/0 vers Switch1 (câble droit).</li>
+<li>Switch1 vers Serveur Web et Serveur DNS (câbles droits).</li>
+</ul>
+<p><strong>Question A1 :</strong> on utilise un câble croisé car on relie deux équipements de même nature (routeur vers routeur) : l'émission de l'un doit arriver sur la réception de l'autre. Précision : sur du matériel récent, l'auto-MDIX gère cela, mais dans Packet Tracer le câble croisé est le choix attendu et le plus sûr. Les autres liens sont tous droits entre équipements de nature différente (poste vers switch, switch vers routeur).</p>
+<h2>3. Partie B – Configuration des routeurs</h2>
+<p><strong>R1</strong></p>
+<pre><code>enable
+configure terminal
+hostname R1
+interface g0/0
+ ip address 192.168.10.1 255.255.255.0
+ no shutdown
+interface g0/1
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+exit
+ip route 172.16.0.0 255.255.255.0 10.0.0.2
+end
+write memory
+</code></pre>
+<p><strong>R2</strong></p>
+<pre><code>enable
+configure terminal
+hostname R2
+interface g0/0
+ ip address 172.16.0.1 255.255.255.0
+ no shutdown
+interface g0/1
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+exit
+ip route 192.168.10.0 255.255.255.0 10.0.0.1
+end
+write memory
+</code></pre>
+<p><strong>Question B1 :</strong></p>
+<ul>
+<li>R1 : <code>ip route 172.16.0.0 255.255.255.0 10.0.0.2</code></li>
+<li>R2 : <code>ip route 192.168.10.0 255.255.255.0 10.0.0.1</code></li>
+</ul>
+<p>Chaque route indique : « pour joindre le réseau de destination, envoyer les paquets à l'adresse du routeur voisin (prochain saut) ».</p>
+<p><strong>Question B2 :</strong> le masque /30 (255.255.255.252) laisse 2 bits pour la partie hôte, soit 4 adresses au total, dont l'adresse réseau et l'adresse de diffusion. Il reste <strong>2 hôtes</strong> utilisables, ce qui est exactement ce qu'il faut pour une liaison point à point entre deux routeurs.</p>
+<p><strong>Erreurs fréquentes :</strong> oubli de <code>no shutdown</code> (interface administrativement down), inversion du masque et de l'adresse de prochain saut dans la route, oubli de la route sur l'un des deux routeurs.</p>
+<h2>4. Partie C – Configuration des serveurs</h2>
+<p><strong>Serveur DHCP</strong> (<em>Services &gt; DHCP</em>, service <strong>On</strong>) :</p>
+<table>
+<thead>
+<tr>
+<th>Paramètre</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pool Name</td>
+<td>serverPool</td>
+</tr>
+<tr>
+<td>Default Gateway</td>
+<td>192.168.10.1</td>
+</tr>
+<tr>
+<td>DNS Server</td>
+<td>172.16.0.11</td>
+</tr>
+<tr>
+<td>Start IP Address</td>
+<td>192.168.10.10</td>
+</tr>
+<tr>
+<td>Subnet Mask</td>
+<td>255.255.255.0</td>
+</tr>
+<tr>
+<td>Maximum Number of Users</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p>Cliquer sur <strong>Save</strong> (si le pool <code>serverPool</code> existe déjà, le modifier plutôt que d'en créer un second : il ne peut pas être renommé ni supprimé dans Packet Tracer). Sans validation, le pool n'est pas pris en compte : c'est l'erreur la plus fréquente.</p>
+<p><strong>Serveur Web</strong> (<em>Services &gt; HTTP</em>) : HTTP <strong>On</strong>, éditer <code>index.html</code> avec un message contenant le nom de l'élève, puis <strong>Save</strong>.</p>
+<p><strong>Serveur DNS</strong> (<em>Services &gt; DNS</em>) : DNS <strong>On</strong>, enregistrement <code>www.monsite.local</code>, type <strong>A Record</strong>, adresse <code>172.16.0.10</code>, puis <strong>Add</strong>.</p>
+<p><strong>Question C1 :</strong> un serveur doit être joignable à une adresse fixe et connue. Les clients, le DNS et la configuration du DHCP s'appuient sur cette adresse. Avec une adresse dynamique, elle pourrait changer et rendre le service injoignable. De plus, le serveur DHCP ne peut pas obtenir son adresse de lui-même : c'est lui qui distribue les adresses.</p>
+<h2>5. Partie D – Clients</h2>
+<p>Résultat attendu (l'ordre d'attribution peut varier) :</p>
+<table>
+<thead>
+<tr>
+<th>Poste</th>
+<th>Adresse IP</th>
+<th>Masque</th>
+<th>Passerelle</th>
+<th>DNS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC0</td>
+<td>192.168.10.10</td>
+<td>255.255.255.0</td>
+<td>192.168.10.1</td>
+<td>172.16.0.11</td>
+</tr>
+<tr>
+<td>PC1</td>
+<td>192.168.10.11</td>
+<td>255.255.255.0</td>
+<td>192.168.10.1</td>
+<td>172.16.0.11</td>
+</tr>
+<tr>
+<td>Laptop</td>
+<td>192.168.10.12</td>
+<td>255.255.255.0</td>
+<td>192.168.10.1</td>
+<td>172.16.0.11</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question D1 :</strong> non, les adresses IP sont différentes : le serveur DHCP attribue une adresse libre différente à chaque client dans la plage du pool, et deux machines ne peuvent pas avoir la même adresse sur un réseau. Le masque, la passerelle et le DNS sont en revanche identiques car ils sont communs au pool.</p>
+<p><strong>Si un poste affiche 169.254.x.x :</strong> il n'a pas reçu d'offre DHCP (adressage APIPA). Causes possibles : service DHCP à Off, pool non sauvegardé, liens encore orange, serveur DHCP avec une mauvaise passerelle ou un mauvais masque.</p>
+<h2>6. Partie E – Tests et validation</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ping</code> vers 192.168.10.1</td>
+<td>Réussi</td>
+</tr>
+<tr>
+<td><code>ping</code> vers 10.0.0.2</td>
+<td>Réussi</td>
+</tr>
+<tr>
+<td><code>ping</code> vers 172.16.0.10</td>
+<td>Réussi (le premier paquet peut échouer le temps de la résolution ARP)</td>
+</tr>
+<tr>
+<td>Navigateur <code>http://172.16.0.10</code></td>
+<td>Page personnalisée affichée</td>
+</tr>
+<tr>
+<td>Navigateur <code>http://www.monsite.local</code></td>
+<td>Page personnalisée affichée</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ligne attendue dans <code>show ip route</code> sur R1 :</strong></p>
+<pre><code>S    172.16.0.0/24 [1/0] via 10.0.0.2
+</code></pre>
+<p>Les réseaux connectés apparaissent avec le code <code>C</code> (192.168.10.0/24 et 10.0.0.0/30) et les adresses locales avec le code <code>L</code>.</p>
+<p><code>show ip interface brief</code> : les interfaces G0/0 et G0/1 doivent être « up / up ».</p>
+<h2>7. Partie F – Observation DORA</h2>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Message</th>
+<th>IP source</th>
+<th>IP destination</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>DHCP Discover</td>
+<td>0.0.0.0</td>
+<td>255.255.255.255</td>
+</tr>
+<tr>
+<td>2</td>
+<td>DHCP Offer</td>
+<td>192.168.10.2</td>
+<td>255.255.255.255 (ou adresse proposée)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>DHCP Request</td>
+<td>0.0.0.0</td>
+<td>255.255.255.255</td>
+</tr>
+<tr>
+<td>4</td>
+<td>DHCP Acknowledge</td>
+<td>192.168.10.2</td>
+<td>255.255.255.255 (ou adresse attribuée)</td>
+</tr>
+</tbody>
+</table>
+<p>Les adresses de destination des messages Offer et Acknowledge peuvent différer selon la version de Packet Tracer : accepter les deux réponses si l'élève justifie ce qu'il observe.</p>
+<p><strong>Question F1 :</strong> au moment du Discover, le client n'a aucune adresse IP et ne connaît ni le serveur DHCP ni sa propre passerelle. Il ne peut donc pas contacter un destinataire précis : il diffuse sa demande à tout le réseau local (255.255.255.255), et seul un serveur DHCP y répondra. Cette diffusion ne franchit pas le routeur, d'où le serveur DHCP placé dans le même LAN (ou l'usage d'un relais DHCP).</p>
+<h2>8. Partie G – Pannes suggérées pour le dépannage</h2>
+<table>
+<thead>
+<tr>
+<th>Panne introduite</th>
+<th>Symptôme</th>
+<th>Diagnostic</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Passerelle erronée dans le pool DHCP</td>
+<td>Les clients reçoivent une IP mais n'atteignent pas le serveur Web</td>
+<td><code>ipconfig</code> : mauvaise passerelle</td>
+<td>Corriger le pool, puis renouveler le bail</td>
+</tr>
+<tr>
+<td>Route statique supprimée sur R2</td>
+<td>Ping vers le Web en échec (« Request timed out »)</td>
+<td><code>show ip route</code> sur R2 : pas de route vers 192.168.10.0</td>
+<td>Rétablir la route</td>
+</tr>
+<tr>
+<td><code>shutdown</code> sur R1 G0/1</td>
+<td>Aucun accès au réseau distant</td>
+<td><code>show ip interface brief</code> : interface administratively down</td>
+<td><code>no shutdown</code></td>
+</tr>
+<tr>
+<td>Service HTTP à Off</td>
+<td>Ping réussi mais navigateur en échec</td>
+<td>Services du serveur Web</td>
+<td>Activer HTTP</td>
+</tr>
+<tr>
+<td>Service DHCP à Off</td>
+<td>Clients en 169.254.x.x</td>
+<td>Services du serveur DHCP</td>
+<td>Activer DHCP</td>
+</tr>
+<tr>
+<td>Mauvais masque sur un lien WAN</td>
+<td>Ping WAN en échec</td>
+<td><code>show ip interface brief</code> et configuration</td>
+<td>Corriger le masque</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Démarche méthodique attendue (de proche en proche) :</strong> vérifier le poste (<code>ipconfig</code>), puis la passerelle, puis le routeur voisin, puis le réseau distant, puis le service (HTTP, DNS).</p>
+<h2>9. Corrigé des questions de synthèse</h2>
+<ol>
+<li><strong>Route statique supprimée sur R2 :</strong> le paquet aller atteint le serveur Web (R1 connaît la route vers 172.16.0.0/24), mais R2 ne sait pas où renvoyer la réponse destinée à 192.168.10.x : elle est perdue. Le ping échoue donc, car il nécessite un aller-retour. Le routage doit toujours être configuré dans les deux sens.</li>
+<li><strong>Décision du routeur :</strong> il compare l'adresse de destination (172.16.0.10) aux réseaux de sa table de routage, retient la route correspondante la plus spécifique (plus long préfixe), et envoie le paquet vers le prochain saut (10.0.0.2) par l'interface associée (G0/1).</li>
+<li><strong>Plage commençant à .10 :</strong> on réserve les adresses .1 à .9 aux équipements à adresse fixe (routeur en .1, serveur DHCP en .2, et de la marge pour imprimantes ou autres serveurs), afin d'éviter qu'une adresse distribuée entre en conflit avec une adresse statique.</li>
+<li><strong>Intérêt du DNS :</strong> on retient un nom plutôt qu'une adresse numérique, et si l'adresse du serveur change, seul l'enregistrement DNS est modifié : les utilisateurs n'ont rien à changer.</li>
+</ol>
+<h2>10. Corrigé du bonus</h2>
+<p><strong>Relais DHCP</strong> (serveur DHCP dans le LAN B, par exemple en 172.16.0.12) :</p>
+<pre><code>R1(config)# interface g0/0
+R1(config-if)# ip helper-address 172.16.0.12
+</code></pre>
+<p>Le pool doit alors cibler le réseau 192.168.10.0/24 avec la passerelle 192.168.10.1 sur le serveur DHCP distant. R2 doit connaître la route vers 192.168.10.0/24 (déjà présente). Le routeur transforme la diffusion du client en message direct (unicast) vers le serveur DHCP.</p>
+<p><strong>DHCP sur le routeur R1 :</strong></p>
+<pre><code>ip dhcp excluded-address 192.168.10.1 192.168.10.9
+ip dhcp pool LAN1
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 172.16.0.11
+</code></pre>
+<p>Vérification : <code>show ip dhcp binding</code> et <code>show ip dhcp pool</code>.</p>
+<h2>11. Barème de correction (sur 20)</h2>
+<table>
+<thead>
+<tr>
+<th>Compétence</th>
+<th>Points</th>
+<th>Indications de notation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Montage</td>
+<td>2</td>
+<td>0,5 par erreur de câblage ou de nom, jusqu'à 0</td>
+</tr>
+<tr>
+<td>Routeurs : interfaces</td>
+<td>2</td>
+<td>1 par routeur (adresses et <code>no shutdown</code>)</td>
+</tr>
+<tr>
+<td>Routeurs : routes statiques</td>
+<td>2</td>
+<td>1 par route correcte</td>
+</tr>
+<tr>
+<td>Serveur DHCP</td>
+<td>3</td>
+<td>1 adresse statique, 1 pool complet, 1 pool validé et fonctionnel</td>
+</tr>
+<tr>
+<td>Serveur Web / DNS</td>
+<td>2</td>
+<td>1 page personnalisée, 1 enregistrement DNS</td>
+</tr>
+<tr>
+<td>Clients</td>
+<td>1</td>
+<td>Les 3 postes en DHCP avec adresses valides</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>3</td>
+<td>1 ping, 1 accès par IP, 1 accès par nom</td>
+</tr>
+<tr>
+<td>Observation DORA</td>
+<td>2</td>
+<td>1,5 pour le tableau, 0,5 pour F1</td>
+</tr>
+<tr>
+<td>Questions</td>
+<td>2</td>
+<td>Réponses justes et argumentées</td>
+</tr>
+<tr>
+<td>Dépannage</td>
+<td>1</td>
+<td>Démarche méthodique, même si la panne n'est pas résolue</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>20</strong></td>
+<td>Bonus jusqu'à +2</td>
+</tr>
+</tbody>
+</table>
+<h2>12. Conseils de mise en œuvre</h2>
+<ul>
+<li>Prévoir 2 heures ; la partie F et le bonus peuvent être donnés à part pour une séance courte.</li>
+<li>Fournir aux élèves en difficulté un fichier <code>.pkt</code> pré-câblé (sans configuration) afin qu'ils se concentrent sur l'adressage et le routage.</li>
+<li>Pour l'évaluation, demander de sauvegarder le fichier <code>.pkt</code> nommé <code>NOM_Prenom_TP_DHCP.pkt</code> et de le rendre sur l'espace de dépôt.</li>
+<li>Packet Tracer peut afficher des liens orange pendant quelques secondes : inviter les élèves à attendre ou à utiliser le bouton d'avance rapide (<em>Fast Forward Time</em>) avant de conclure à une panne.</li>
+</ul></body></html>
