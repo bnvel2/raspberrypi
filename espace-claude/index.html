@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Espace Claude — Simulateur &amp; Home Assistant</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--txt:#1b2333;--mut:#5a6479;--bd:#d9dfeb;--a:#2f6fdc;--b:#18a0a0}
+@media(prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{max-width:1000px;margin:0 auto;padding:24px 20px 6px}
+h1{margin:0 0 4px;font-size:1.7rem}header p{margin:0;color:var(--mut)}
+nav{max-width:1000px;margin:14px auto 0;padding:0 20px;display:flex;gap:8px}
+nav button{font:inherit;font-weight:700;padding:10px 18px;border-radius:999px;border:2px solid var(--c);background:transparent;color:var(--c);cursor:pointer}
+nav button.on{background:var(--c);color:#fff}
+#t-sim{--c:var(--a)}#t-ha{--c:var(--b)}
+main{max-width:1000px;margin:14px auto 40px;padding:0 20px}
+section[hidden]{display:none}
+h2{margin:18px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--bd);border-left:6px solid var(--a);border-radius:12px;padding:14px 16px}
+.card:hover{box-shadow:0 3px 12px rgba(0,0,0,.12)}
+.card b{display:block;margin-bottom:4px}.card span{color:var(--mut);font-size:.92rem}
+.card.ens{border-left-color:#c0392b}
+.guide{background:var(--card);border:1px solid var(--bd);border-top:6px solid var(--b);border-radius:14px;padding:6px 22px 18px}
+.guide h2{color:var(--b)}
+pre{background:#0f1722;color:#d7e0ee;padding:12px 14px;border-radius:10px;overflow-x:auto;font:14px/1.6 ui-monospace,Menlo,Consolas,monospace}
+code{font-family:ui-monospace,Menlo,Consolas,monospace}
+.note{border-left:4px solid var(--b);background:color-mix(in srgb,var(--b) 12%,transparent);padding:8px 12px;border-radius:6px}
+.warn{border-left-color:#e67e22;background:color-mix(in srgb,#e67e22 12%,transparent)}
+</style>
+</head>
+<body>
+<header><h1>Espace Claude</h1><p>Travaux réalisés avec Claude : informatique et réseaux (bac pro CIEL), domotique Home Assistant.</p></header>
+<nav role="tablist">
+  <button id="t-sim" class="on" role="tab">🖥️ Simulateur</button>
+  <button id="t-ha" role="tab">🏠 Home Assistant</button>
+</nav>
+<main>
+<section id="p-sim">
+  <h2>Travaux pratiques Cisco (Packet Tracer)</h2>
+  <p>Chaque TP contient le schéma, le plan d’adressage, la configuration CLI, des tests, un QCM et son corrigé.</p>
+  <div class="grid">
+    <a class="card" href="simulateur/lab-vlan-router-on-a-stick.html"><b>Lab VLAN — router-on-a-stick</b><span>Trunk et routage inter-VLAN sur un seul lien.</span></a>
+    <a class="card" href="simulateur/tp-2-sous-reseaux-2-vlans.html"><b>TP 2 sous-réseaux, 2 VLAN</b><span>Découpage et segmentation.</span></a>
+    <a class="card" href="simulateur/tp-dhcp-serveur-web.html"><b>TP DHCP et serveur web</b><span>Service DHCP et serveur HTTP.</span></a>
+    <a class="card" href="simulateur/tp-box-dhcp-nat.html"><b>TP box : DHCP et NAT</b><span>Une box simulée avec DHCP et PAT.</span></a>
+    <a class="card" href="simulateur/tp-nat-pat-rip.html"><b>TP NAT, PAT et RIP</b><span>Traduction d’adresses et routage dynamique.</span></a>
+    <a class="card" href="simulateur/tp-pare-feu-asa-dmz.html"><b>TP pare-feu ASA 5506-X</b><span>LAN, DMZ, Internet : zones, NAT et ACL.</span></a>
+    <a class="card ens" href="simulateur/tp-depannage-vlan.html"><b>TP dépannage VLAN (avec corrigé enseignant)</b><span>5 pannes à diagnostiquer.</span></a>
+  </div>
+  <h2>Outils</h2>
+  <div class="grid">
+    <a class="card" href="simulateur/calculatrice-ipv4.html"><b>Calculatrice IPv4</b><span>Réseau, masque, diffusion, plage d’hôtes.</span></a>
+    <a class="card" href="simulateur/calculateur-energie.html"><b>Calculateur d’énergie</b><span>Puissance, consommation et coût.</span></a>
+  </div>
+</section>
+<section id="p-ha" hidden>
+  <div class="guide" id="ha-guide">
+    <h2>Piloter Home Assistant avec Claude : mise en route</h2>
+    <p>Objectif : permettre à Claude Desktop de lire l’état de la maison et de commander les appareils que vous choisissez, grâce à l’intégration officielle « Model Context Protocol Server » de Home Assistant.</p>
+    <h2>1. Prérequis</h2>
+    <ul><li>Home Assistant à jour (HA OS, Container ou autre), accessible depuis l’ordinateur.</li><li>Claude Desktop et Node.js installés sur l’ordinateur (pour <code>npx</code>).</li><li>L’assistant « Assist » actif : c’est lui qui décide ce que Claude peut voir.</li></ul>
+    <h2>2. Activer l’intégration</h2>
+    <ol><li>Paramètres → Appareils et services → Ajouter une intégration → <b>Model Context Protocol Server</b>.</li><li>Choisir l’assistant (Assist) qui sera exposé.</li><li>Valider : le serveur répond ensuite sur <code>/api/mcp</code> (anciennes versions : <code>/mcp_server/sse</code>).</li></ol>
+    <h2>3. Choisir les appareils exposés</h2>
+    <p>Paramètres → Assistants vocaux → onglet « Exposer » : n’exposez que le nécessaire (lumières, prises, capteurs). Ce que vous n’exposez pas reste invisible pour Claude.</p>
+    <h2>4. Créer un jeton d’accès</h2>
+    <p>Profil (en bas à gauche) → Sécurité → « Jetons d’accès de longue durée » → Créer. Copiez-le tout de suite : il ne sera plus affiché.</p>
+    <p class="note warn"><b>Secret :</b> le jeton donne accès à votre maison. Ne le publiez jamais (ni dans GitHub, ni dans une capture d’écran).</p>
+    <h2>5. Brancher Claude Desktop</h2>
+    <p>Réglages → Développeur → Modifier la configuration, puis ajouter (remplacer l’adresse et le jeton par les vôtres) :</p>
+<pre>{
+  "mcpServers": {
+    "home-assistant": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote",
+        "http://ADRESSE_DE_HOME_ASSISTANT:8123/api/mcp",
+        "--header", "Authorization: Bearer VOTRE_JETON"
+      ]
+    }
+  }
+}</pre>
+    <p>Redémarrez Claude Desktop. Les outils Home Assistant apparaissent dans la conversation.</p>
+    <h2>6. Premiers essais</h2>
+    <ul><li>« Quelles lumières sont allumées ? »</li><li>« Éteins la lumière du salon. »</li><li>« Quelle est la température dans la chambre depuis ce matin ? »</li></ul>
+    <h2>7. Bonnes pratiques</h2>
+    <ul><li>Commencez par des appareils sans risque (lumières, prises) ; évitez d’exposer serrures, alarme ou portail.</li><li>Gardez Home Assistant sur le réseau local ; pour un accès distant, utilisez un VPN plutôt qu’une ouverture de port.</li><li>En cas de doute sur le jeton : supprimez-le dans le profil et créez-en un autre.</li></ul>
+  </div>
+</section>
+</main>
+<script>
+const s=document.getElementById('t-sim'),h=document.getElementById('t-ha'),ps=document.getElementById('p-sim'),ph=document.getElementById('p-ha');
+function go(ha){ps.hidden=ha;ph.hidden=!ha;s.classList.toggle('on',!ha);h.classList.toggle('on',ha);try{history.replaceState(null,'',ha?'#home-assistant':'#simulateur')}catch(e){}}
+s.onclick=()=>go(false);h.onclick=()=>go(true);go(location.hash==='#home-assistant');
+</script>
+</body>
+</html>

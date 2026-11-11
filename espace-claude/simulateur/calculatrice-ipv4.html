@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculatrice IPv4</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1b2333;--mut:#667085;--ac:#2f6fed;--bd:#e3e8f2;--net:#2f6fed;--host:#e0693a;--ok:#eaf1ff;--err:#c0392b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1420;--card:#171e2e;--tx:#e8ecf5;--mut:#98a2b8;--ac:#6b9bff;--bd:#27314a;--net:#6b9bff;--host:#ff9563;--ok:#1d2a47;--err:#ff7b6b}}
+:root[data-theme="dark"]{--bg:#0f1420;--card:#171e2e;--tx:#e8ecf5;--mut:#98a2b8;--ac:#6b9bff;--bd:#27314a;--net:#6b9bff;--host:#ff9563;--ok:#1d2a47;--err:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px 16px}
+main{max-width:860px;margin:0 auto}
+h1{font-size:1.7rem;margin:0 0 4px}
+p.sub{color:var(--mut);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(20,30,60,.06);margin-bottom:20px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:4px}
+.f{flex:1 1 200px}
+input{width:100%;padding:11px 12px;font-size:1.05rem;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);font-family:ui-monospace,Consolas,monospace}
+input:focus{outline:2px solid var(--ac);border-color:transparent}
+button{padding:12px 22px;font-size:1rem;font-weight:600;border:0;border-radius:9px;background:var(--ac);color:#fff;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#0f1420}}
+.hint{font-size:.8rem;color:var(--mut);margin-top:10px}
+#err{color:var(--err);font-weight:600;margin-top:12px;display:none}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:560px}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--bd)}
+th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+tr.key td{background:var(--ok)}
+td.dec{font-family:ui-monospace,Consolas,monospace;font-weight:700;white-space:nowrap}
+td.bin{font-family:ui-monospace,Consolas,monospace;font-size:.9rem;white-space:nowrap}
+.n{color:var(--net)}.h{color:var(--host)}
+.leg{margin-top:12px;font-size:.85rem;color:var(--mut)}
+#res{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Calculatrice d’adressage IPv4</h1>
+<p class="sub">Entrez une adresse IPv4 et son masque pour obtenir les adresses clés du réseau.</p>
+<div class="card">
+<div class="row">
+<div class="f"><label for="ip">Adresse IPv4</label><input id="ip" value="192.168.1.77" autocomplete="off"></div>
+<div class="f"><label for="mask">Masque (CIDR ou décimal)</label><input id="mask" value="/26" autocomplete="off"></div>
+<button id="go">Calculer</button>
+</div>
+<div class="hint">Exemples de masque : <b>24</b>, <b>/26</b> ou <b>255.255.255.192</b></div>
+<div id="err"></div>
+</div>
+<div class="card" id="res">
+<div class="scroll">
+<table>
+<thead><tr><th>Élément</th><th>Valeur</th><th>Binaire</th></tr></thead>
+<tbody id="body"></tbody>
+</table>
+</div>
+<div class="leg"><span class="n">■ bits réseau</span> &nbsp; <span class="h">■ bits hôte</span></div>
+</div>
+</main>
+<script>
+function parseIP(s){
+  var p=s.trim().split('.');
+  if(p.length!==4)return null;
+  var v=0;
+  for(var i=0;i<4;i++){
+    if(!/^\d{1,3}$/.test(p[i])||+p[i]>255)return null;
+    v=v*256+(+p[i]);
+  }
+  return v;
+}
+function parseMask(s){
+  s=s.trim().replace(/^\//,'');
+  if(/^\d{1,2}$/.test(s)){
+    var c=+s;
+    if(c>32)return null;
+    return c;
+  }
+  var m=parseIP(s);
+  if(m===null)return null;
+  var b=m.toString(2).padStart(32,'0');
+  if(!/^1*0*$/.test(b))return null;
+  return b.indexOf('0')===-1?32:b.indexOf('0');
+}
+function toIP(v){return [v>>>24,(v>>>16)&255,(v>>>8)&255,v&255].join('.');}
+function bin(v,c){
+  var b=(v>>>0).toString(2).padStart(32,'0'),o='';
+  for(var i=0;i<32;i++){
+    if(i%8===0&&i)o+='.';
+    o+='<span class="'+(i<c?'n':'h')+'">'+b[i]+'</span>';
+  }
+  return o;
+}
+function row(label,v,c,key){
+  return '<tr'+(key?' class="key"':'')+'><td>'+label+'</td><td class="dec">'+toIP(v)+'</td><td class="bin">'+bin(v,c)+'</td></tr>';
+}
+function calc(){
+  var err=document.getElementById('err'),res=document.getElementById('res');
+  var ip=parseIP(document.getElementById('ip').value);
+  var c=parseMask(document.getElementById('mask').value);
+  if(ip===null||c===null){
+    err.textContent=ip===null?'Adresse IPv4 invalide (ex. 192.168.1.77).':'Masque invalide (ex. /24 ou 255.255.255.0).';
+    err.style.display='block';res.style.display='none';return;
+  }
+  err.style.display='none';
+  var mask=c===0?0:((0xFFFFFFFF<<(32-c))>>>0);
+  var net=(ip&mask)>>>0;
+  var bc=(net|(~mask>>>0))>>>0;
+  var first,last,hosts;
+  if(c===32){first=last=net;hosts=1;}
+  else if(c===31){first=net;last=bc;hosts=2;}
+  else{first=net+1;last=bc-1;hosts=Math.pow(2,32-c)-2;}
+  var wild=(~mask>>>0);
+  var h='';
+  h+=row('Adresse saisie',ip,c,false);
+  h+=row('Masque (/'+c+')',mask,c,false);
+  h+=row('Adresse réseau',net,c,true);
+  h+=row('Première adresse',first,c,true);
+  h+=row('Dernière adresse',last,c,true);
+  h+=row('Adresse de broadcast',bc,c,true);
+  h+='<tr><td>Nombre d’hôtes</td><td class="dec" colspan="2">'+hosts.toLocaleString('fr-FR')+'</td></tr>';
+  document.getElementById('body').innerHTML=h;
+  res.style.display='block';
+}
+document.getElementById('go').onclick=calc;
+['ip','mask'].forEach(function(i){document.getElementById(i).addEventListener('keydown',function(e){if(e.key==='Enter')calc();});});
+calc();
+</script>
+</body>
+</html>

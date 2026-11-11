@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TP Cisco — Pare-feu ASA 5506-X : LAN, DMZ et Internet</title>
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--txt:#1b2333;--mut:#5a6479;--bd:#d9dfeb;
+  --code:#0f1722;--codetxt:#d7e0ee;--prompt:#ffd166;--cmd:#8ee6a8;--cmt:#7f8da6;
+  --l:40%;--tint:95%;--ok:#1e8e4e;--ko:#c0392b;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+}
+:root[data-theme="dark"]{--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header.top{padding:22px 20px 8px;max-width:1100px;margin:0 auto}
+header.top h1{margin:0 0 4px;font-size:1.6rem}
+header.top p{margin:0;color:var(--mut)}
+#tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:1100px;margin:14px auto 0;padding:0 20px}
+.tab{--c:hsl(var(--h) 65% var(--l));border:2px solid var(--c);background:transparent;color:var(--c);font:inherit;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer}
+.tab.on{background:var(--c);color:#fff}
+.tab:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+main{max-width:1100px;margin:14px auto 40px;padding:0 20px}
+section.panel{--c:hsl(var(--h) 65% var(--l));background:var(--card);border:1px solid var(--bd);border-top:6px solid var(--c);border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+section.panel[hidden]{display:none}
+section.panel h2{margin:0 0 12px;color:var(--c)}
+section.panel h3{margin:18px 0 8px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{border:1px solid var(--bd);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:hsl(var(--h) 60% var(--tint));color:var(--txt)}
+ul.obj{padding-left:20px}
+.code{border-radius:10px;overflow:hidden;margin:12px 0;background:var(--code)}
+.code .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:hsl(var(--h) 55% 30%);color:#fff;font-weight:600}
+.code .bar button{font:inherit;font-size:.85rem;border:0;border-radius:6px;padding:4px 10px;cursor:pointer;background:#ffffff26;color:#fff}
+.code pre{margin:0;padding:12px 14px;overflow-x:auto;color:var(--codetxt);font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.code .p{color:var(--prompt)}.code .m{color:var(--cmd)}.code .c{color:var(--cmt);font-style:italic}
+.note{border-left:4px solid var(--c);background:hsl(var(--h) 60% var(--tint));padding:8px 12px;border-radius:6px;margin:10px 0}
+/* schéma */
+.schema{overflow-x:auto}
+.schema svg{width:100%;min-width:720px;height:auto;display:block}
+.schema text{fill:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.schema .nm{font-weight:700;font-size:15px;fill:#fff}
+.schema .if{font-size:12px;font-weight:600}
+.schema .ip{font-size:12px;fill:var(--mut)}
+.schema .lk{stroke:var(--mut);stroke-width:2.5;fill:none}
+.schema .tr{stroke:#e74c3c;stroke-width:5;stroke-dasharray:10 6;fill:none}
+.schema .ifbg{fill:var(--card);stroke:var(--bd)}
+/* qcm */
+.q{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:12px 0}
+.q.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.q.ko{border-color:var(--ko);background:color-mix(in srgb,var(--ko) 12%,transparent)}
+.q p{margin:0 0 8px;font-weight:600}
+.q label{display:block;padding:4px 6px;border-radius:6px;cursor:pointer}
+.q label:hover{background:hsl(var(--h) 60% var(--tint))}
+.btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:10px 18px;background:var(--c);color:#fff;cursor:pointer}
+#score{font-weight:700;margin-left:12px}
+.grille{font-family:ui-monospace,Menlo,Consolas,monospace;word-spacing:6px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 id="titre"></h1>
+  <p id="soustitre"></p>
+</header>
+<nav id="tabs" role="tablist" aria-label="Sections du TP"></nav>
+<main>
+  <section class="panel" id="enonce"   data-label="📘 Énoncé"          data-h="215"></section>
+
+  <section class="panel" id="schema"   data-label="🗺️ Schéma"          data-h="28">
+    <h2>Schéma de la topologie</h2>
+    <div class="schema">
+<svg viewBox="0 0 900 680" role="img" aria-label="Topologie du TP pare-feu : Internet simulé, FW1 ASA 5506-X, LAN et DMZ">
+  <!-- Zones -->
+  <rect x="20" y="8" width="860" height="304" rx="16" fill="#5d7a99" fill-opacity=".10" stroke="#5d7a99" stroke-dasharray="6 5"/>
+  <text x="34" y="300" style="font-size:12px;font-weight:700;fill:#5d7a99">INTERNET simulé · 10.20.20.0/24</text>
+  <rect x="20" y="438" width="390" height="232" rx="16" fill="#27ae60" fill-opacity=".12" stroke="#27ae60" stroke-dasharray="6 5"/>
+  <text x="34" y="662" style="font-size:12px;font-weight:700;fill:#27ae60">INSIDE · niv. 100 · 192.168.10.0/24 (FW1 .1)</text>
+  <rect x="600" y="438" width="280" height="232" rx="16" fill="#8e44ad" fill-opacity=".12" stroke="#8e44ad" stroke-dasharray="6 5"/>
+  <text x="614" y="662" style="font-size:12px;font-weight:700;fill:#8e44ad">DMZ · niv. 70 · 172.16.1.0/24 (FW1 .1)</text>
+
+  <!-- Liens -->
+  <path class="lk" d="M240 72 L410 115"/>
+  <path class="lk" d="M660 72 L490 115"/>
+  <path class="lk" d="M450 171 L450 230"/>
+  <path d="M450 290 L450 350" stroke="#d63384" stroke-width="6" fill="none"/>
+  <path d="M390 422 L190 465" stroke="#27ae60" stroke-width="5" fill="none"/>
+  <path d="M510 422 L730 465" stroke="#8e44ad" stroke-width="5" fill="none"/>
+  <path class="lk" d="M140 521 L95 585"/>
+  <path class="lk" d="M240 521 L285 585"/>
+
+  <!-- Appareils -->
+  <rect x="170" y="20" width="140" height="52" rx="12" fill="#5d7a99"/>
+  <text class="nm" x="240" y="42" text-anchor="middle">PC-EXT</text>
+  <text class="nm" x="240" y="60" text-anchor="middle" style="font-size:11px;font-weight:500">10.20.20.10</text>
+
+  <rect x="590" y="20" width="140" height="52" rx="12" fill="#5d7a99"/>
+  <text class="nm" x="660" y="42" text-anchor="middle">SRV-INT</text>
+  <text class="nm" x="660" y="60" text-anchor="middle" style="font-size:11px;font-weight:500">10.20.20.20</text>
+
+  <rect x="360" y="115" width="180" height="56" rx="14" fill="#2f80ed"/>
+  <text class="nm" x="450" y="139" text-anchor="middle">SW-EXT</text>
+  <text class="nm" x="450" y="158" text-anchor="middle" style="font-size:11px;font-weight:500">2960 · 10.20.20.2</text>
+
+  <rect x="360" y="230" width="180" height="60" rx="14" fill="#f28c28"/>
+  <text class="nm" x="450" y="256" text-anchor="middle">R-ISP</text>
+  <text class="nm" x="450" y="276" text-anchor="middle" style="font-size:11px;font-weight:500">2911 · .1 / .1</text>
+
+  <rect x="330" y="350" width="240" height="72" rx="14" fill="#c0392b"/>
+  <text class="nm" x="450" y="378" text-anchor="middle" style="font-size:18px">FW1</text>
+  <text class="nm" x="450" y="398" text-anchor="middle" style="font-size:12px;font-weight:500">ASA 5506-X</text>
+  <text class="nm" x="450" y="414" text-anchor="middle" style="font-size:11px;font-weight:500">outside .2 · inside .1 · dmz .1</text>
+
+  <rect x="100" y="465" width="180" height="56" rx="14" fill="#2f80ed"/>
+  <text class="nm" x="190" y="489" text-anchor="middle">SW-IN</text>
+  <text class="nm" x="190" y="508" text-anchor="middle" style="font-size:11px;font-weight:500">2960 · 192.168.10.2</text>
+
+  <rect x="650" y="465" width="160" height="56" rx="12" fill="#8e44ad"/>
+  <text class="nm" x="730" y="489" text-anchor="middle">SRV-WEB</text>
+  <text class="nm" x="730" y="508" text-anchor="middle" style="font-size:11px;font-weight:500">172.16.1.10</text>
+
+  <rect x="30" y="585" width="130" height="52" rx="12" fill="#27ae60"/>
+  <text class="nm" x="95" y="607" text-anchor="middle">PC1</text>
+  <text class="nm" x="95" y="625" text-anchor="middle" style="font-size:11px;font-weight:500">192.168.10.10</text>
+
+  <rect x="220" y="585" width="130" height="52" rx="12" fill="#27ae60"/>
+  <text class="nm" x="285" y="607" text-anchor="middle">PC2</text>
+  <text class="nm" x="285" y="625" text-anchor="middle" style="font-size:11px;font-weight:500">192.168.10.11</text>
+
+  <!-- Textes de zone sur la liaison OUTSIDE -->
+  <text x="512" y="322" style="font-size:12px;font-weight:700;fill:#d63384">OUTSIDE · niv. 0 · 10.10.10.0/24</text>
+  <text class="ip" x="512" y="340">NAT statique : SRV-WEB vu en 10.10.10.10</text>
+
+  <!-- Étiquettes d'interfaces -->
+  <g class="if">
+    <rect class="ifbg" x="224" y="75" width="34" height="18" rx="5"/><text x="241" y="88" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="364" y="93" width="44" height="18" rx="5"/><text x="386" y="106" text-anchor="middle">Fa0/1</text>
+    <rect class="ifbg" x="643" y="75" width="34" height="18" rx="5"/><text x="660" y="88" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="492" y="93" width="44" height="18" rx="5"/><text x="514" y="106" text-anchor="middle">Fa0/2</text>
+    <rect class="ifbg" x="455" y="173" width="44" height="18" rx="5"/><text x="477" y="186" text-anchor="middle">Gi0/1</text>
+    <rect class="ifbg" x="455" y="209" width="44" height="18" rx="5"/><text x="477" y="222" text-anchor="middle">Gi0/1</text>
+    <rect class="ifbg" x="455" y="292" width="44" height="18" rx="5"/><text x="477" y="305" text-anchor="middle">Gi0/0</text>
+    <rect class="ifbg" x="455" y="329" width="44" height="18" rx="5"/><text x="477" y="342" text-anchor="middle">Gi1/1</text>
+    <rect class="ifbg" x="318" y="426" width="44" height="18" rx="5"/><text x="340" y="439" text-anchor="middle">Gi1/2</text>
+    <rect class="ifbg" x="198" y="441" width="44" height="18" rx="5"/><text x="220" y="454" text-anchor="middle">Gi0/1</text>
+    <rect class="ifbg" x="530" y="426" width="44" height="18" rx="5"/><text x="552" y="439" text-anchor="middle">Gi1/3</text>
+    <rect class="ifbg" x="640" y="438" width="34" height="18" rx="5"/><text x="657" y="451" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="104" y="526" width="44" height="18" rx="5"/><text x="126" y="539" text-anchor="middle">Fa0/1</text>
+    <rect class="ifbg" x="78" y="558" width="34" height="18" rx="5"/><text x="95" y="571" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="252" y="526" width="44" height="18" rx="5"/><text x="274" y="539" text-anchor="middle">Fa0/2</text>
+    <rect class="ifbg" x="268" y="558" width="34" height="18" rx="5"/><text x="285" y="571" text-anchor="middle">Fa0</text>
+  </g>
+
+  <!-- Légende -->
+  <g font-size="12">
+    <text x="425" y="478" style="font-weight:700">Légende</text>
+    <rect x="425" y="490" width="14" height="14" rx="3" fill="#c0392b"/><text x="446" y="502">Pare-feu ASA</text>
+    <rect x="425" y="512" width="14" height="14" rx="3" fill="#f28c28"/><text x="446" y="524">Routeur</text>
+    <rect x="425" y="534" width="14" height="14" rx="3" fill="#2f80ed"/><text x="446" y="546">Switch</text>
+    <rect x="425" y="556" width="14" height="14" rx="3" fill="#27ae60"/><text x="446" y="568">PC du LAN</text>
+    <rect x="425" y="578" width="14" height="14" rx="3" fill="#8e44ad"/><text x="446" y="590">Serveur web (DMZ)</text>
+    <rect x="425" y="600" width="14" height="14" rx="3" fill="#5d7a99"/><text x="446" y="612">Internet simulé</text>
+    <line x1="425" y1="630" x2="445" y2="630" stroke="#d63384" stroke-width="6"/><text x="452" y="634">Liaison OUTSIDE</text>
+    <line x1="425" y1="650" x2="445" y2="650" stroke="#7f8da6" stroke-width="2.5"/><text x="452" y="654">Lien d’accès</text>
+  </g>
+</svg>
+    </div>
+  </section>
+
+  <section class="panel" id="adressage" data-label="🔢 Adressage"       data-h="160"></section>
+  <section class="panel" id="config"    data-label="⌨️ Config CLI"       data-h="270"></section>
+  <section class="panel" id="tests"     data-label="✅ Vérifications"    data-h="340"></section>
+  <section class="panel" id="qcm"       data-label="📝 QCM"              data-h="45"></section>
+  <section class="panel" id="corrige"   data-label="🔑 Corrigé"          data-h="0"></section>
+</main>
+
+<script>
+const TP = {
+  titre: "TP Cisco — Pare-feu ASA 5506-X : LAN, DMZ et Internet",
+  sousTitre: "Cisco Packet Tracer 8.2+ · zones de sécurité, NAT et règles de filtrage · niveau bac pro CIEL",
+  enonce: [
+    "Une petite entreprise veut publier un site web interne-externe tout en protégeant son réseau local. Un pare-feu Cisco ASA 5506-X découpe le réseau en trois zones : INSIDE (les postes des employés), DMZ (le serveur web accessible depuis Internet) et OUTSIDE (la sortie vers un Internet simulé).",
+    "Politique à appliquer : les employés peuvent aller vers la DMZ et vers Internet ; Internet ne peut atteindre que le service web de la DMZ (HTTP et HTTPS) ; la DMZ ne peut jamais initier de connexion vers le LAN ; tout le reste est refusé.",
+    "Inspiration : exemple Cisco « Basic ASA NAT Configuration: Webserver in the DMZ » (document 115904), lab Packet Tracer ASA 5506-X DMZ de packettracernetwork.com et lab CCNA Security ASA 5506-X de Cisco Networking Academy. Les adresses publiques de ces labs sont remplacées ici par des plages privées."
+  ],
+  objectifs: [
+    "Nommer les interfaces du pare-feu et leur attribuer des niveaux de sécurité (0, 70, 100)",
+    "Configurer la route par défaut, le PAT (LAN et DMZ) et le NAT statique du serveur web",
+    "Écrire et appliquer des ACL : OUTSIDE_IN (entrée depuis Internet) et DMZ_IN (sortie de la DMZ)",
+    "Activer l’inspection ICMP pour que les réponses de ping reviennent",
+    "Valider chaque flux autorisé ou refusé par des tests, puis lire les compteurs du pare-feu"
+  ],
+  materiel: [
+    "1 pare-feu Cisco ASA 5506-X (FW1)",
+    "1 routeur Cisco 2911 (R-ISP) qui joue le rôle du fournisseur d’accès",
+    "2 switchs Cisco 2960-24TT (SW-IN pour le LAN, SW-EXT pour Internet simulé)",
+    "3 PC (PC1, PC2, PC-EXT) et 2 serveurs (SRV-WEB en DMZ, SRV-INT sur Internet simulé)"
+  ],
+  reseaux: {
+    entetes: ["Zone / réseau", "Adresse réseau", "Masque", "Passerelle", "Niveau de sécurité"],
+    lignes: [
+      ["INSIDE — LAN employés", "192.168.10.0", "255.255.255.0 (/24)", "192.168.10.1 (FW1)", "100"],
+      ["DMZ — serveur web", "172.16.1.0", "255.255.255.0 (/24)", "172.16.1.1 (FW1)", "70"],
+      ["OUTSIDE — liaison FW1 / R-ISP", "10.10.10.0", "255.255.255.0 (/24)", "10.10.10.1 (R-ISP)", "0"],
+      ["Internet simulé", "10.20.20.0", "255.255.255.0 (/24)", "10.20.20.1 (R-ISP)", "—"]
+    ]
+  },
+  adressage: {
+    entetes: ["Appareil", "Interface", "Nom (nameif)", "Adresse IP", "Masque", "Passerelle"],
+    lignes: [
+      ["FW1", "Gi1/1", "outside", "10.10.10.2", "255.255.255.0", "10.10.10.1 (route par défaut)"],
+      ["FW1", "Gi1/2", "inside", "192.168.10.1", "255.255.255.0", "—"],
+      ["FW1", "Gi1/3", "dmz", "172.16.1.1", "255.255.255.0", "—"],
+      ["FW1", "—", "adresse vue d’Internet pour SRV-WEB", "10.10.10.10 (NAT statique)", "—", "—"],
+      ["R-ISP", "Gi0/0", "—", "10.10.10.1", "255.255.255.0", "—"],
+      ["R-ISP", "Gi0/1", "—", "10.20.20.1", "255.255.255.0", "—"],
+      ["SW-IN", "VLAN 1 (gestion)", "—", "192.168.10.2", "255.255.255.0", "192.168.10.1"],
+      ["SW-EXT", "VLAN 1 (gestion)", "—", "10.20.20.2", "255.255.255.0", "10.20.20.1"],
+      ["PC1", "Fa0", "—", "192.168.10.10", "255.255.255.0", "192.168.10.1"],
+      ["PC2", "Fa0", "—", "192.168.10.11", "255.255.255.0", "192.168.10.1"],
+      ["SRV-WEB", "Fa0", "—", "172.16.1.10", "255.255.255.0", "172.16.1.1"],
+      ["PC-EXT", "Fa0", "—", "10.20.20.10", "255.255.255.0", "10.20.20.1"],
+      ["SRV-INT", "Fa0", "—", "10.20.20.20", "255.255.255.0", "10.20.20.1"]
+    ]
+  },
+  liens: {
+    entetes: ["Appareil A", "Interface A", "Appareil B", "Interface B", "Câble", "Zone / réseau"],
+    lignes: [
+      ["FW1", "Gi1/1", "R-ISP", "Gi0/0", "Croisé", "OUTSIDE 10.10.10.0/24"],
+      ["FW1", "Gi1/2", "SW-IN", "Gi0/1", "Droit", "INSIDE 192.168.10.0/24"],
+      ["FW1", "Gi1/3", "SRV-WEB", "Fa0", "Croisé", "DMZ 172.16.1.0/24"],
+      ["SW-IN", "Fa0/1", "PC1", "Fa0", "Droit", "INSIDE"],
+      ["SW-IN", "Fa0/2", "PC2", "Fa0", "Droit", "INSIDE"],
+      ["R-ISP", "Gi0/1", "SW-EXT", "Gi0/1", "Droit", "Internet simulé 10.20.20.0/24"],
+      ["SW-EXT", "Fa0/1", "PC-EXT", "Fa0", "Droit", "Internet simulé"],
+      ["SW-EXT", "Fa0/2", "SRV-INT", "Fa0", "Droit", "Internet simulé"]
+    ]
+  },
+  flux: {
+    entetes: ["Source → destination", "Protocole", "Décision", "Mécanisme"],
+    lignes: [
+      ["INSIDE → DMZ", "tous", "Autorisé", "niveau 100 vers 70 : autorisé par défaut"],
+      ["INSIDE → OUTSIDE", "tous", "Autorisé + PAT", "niveau 100 vers 0 + nat (inside,outside) dynamic interface"],
+      ["DMZ → INSIDE", "tous", "Refusé", "niveau 70 vers 100 bloqué par défaut + deny explicite dans DMZ_IN"],
+      ["DMZ → OUTSIDE", "HTTP, HTTPS, ICMP", "Autorisé + PAT", "ACL DMZ_IN + nat (dmz,outside) dynamic interface"],
+      ["OUTSIDE → DMZ (10.10.10.10)", "TCP 80 et 443", "Autorisé", "NAT statique + ACL OUTSIDE_IN"],
+      ["OUTSIDE → DMZ", "ICMP et tout autre protocole", "Refusé", "deny ip any any dans OUTSIDE_IN"],
+      ["OUTSIDE → INSIDE", "tous", "Refusé", "niveau 0 vers 100 : aucune règle ne l’autorise"]
+    ]
+  },
+  configs: [
+    { appareil: "FW1 — pare-feu Cisco ASA 5506-X", lignes: `! Accès : le mot de passe enable est vide par défaut (appuyer sur Entrée)
+ciscoasa>enable
+ciscoasa#configure terminal
+ciscoasa(config)#hostname FW1
+FW1(config)#enable password cisco
+! 1. Interfaces, noms et niveaux de sécurité
+FW1(config)#interface gigabitEthernet 1/1
+FW1(config-if)#nameif outside
+FW1(config-if)#security-level 0
+FW1(config-if)#ip address 10.10.10.2 255.255.255.0
+FW1(config-if)#no shutdown
+FW1(config-if)#exit
+FW1(config)#interface gigabitEthernet 1/2
+FW1(config-if)#nameif inside
+FW1(config-if)#security-level 100
+FW1(config-if)#ip address 192.168.10.1 255.255.255.0
+FW1(config-if)#no shutdown
+FW1(config-if)#exit
+FW1(config)#interface gigabitEthernet 1/3
+FW1(config-if)#nameif dmz
+FW1(config-if)#security-level 70
+FW1(config-if)#ip address 172.16.1.1 255.255.255.0
+FW1(config-if)#no shutdown
+FW1(config-if)#exit
+! 2. Route par défaut vers le routeur du fournisseur d’accès
+FW1(config)#route outside 0.0.0.0 0.0.0.0 10.10.10.1
+! 3. NAT : PAT pour le LAN et la DMZ, NAT statique pour le serveur web
+FW1(config)#object network LAN-NET
+FW1(config-network-object)#subnet 192.168.10.0 255.255.255.0
+FW1(config-network-object)#nat (inside,outside) dynamic interface
+FW1(config-network-object)#exit
+FW1(config)#object network DMZ-NET
+FW1(config-network-object)#subnet 172.16.1.0 255.255.255.0
+FW1(config-network-object)#nat (dmz,outside) dynamic interface
+FW1(config-network-object)#exit
+FW1(config)#object network WEB-SERVER
+FW1(config-network-object)#host 172.16.1.10
+FW1(config-network-object)#nat (dmz,outside) static 10.10.10.10
+FW1(config-network-object)#exit
+! 4. ACL OUTSIDE_IN : Internet ne peut joindre que le web de la DMZ (adresse réelle du serveur)
+FW1(config)#access-list OUTSIDE_IN extended permit tcp any object WEB-SERVER eq www
+FW1(config)#access-list OUTSIDE_IN extended permit tcp any object WEB-SERVER eq https
+FW1(config)#access-list OUTSIDE_IN extended deny ip any any
+FW1(config)#access-group OUTSIDE_IN in interface outside
+! 5. ACL DMZ_IN : la DMZ n’initie rien vers le LAN, seulement du web et du ping vers l’extérieur
+FW1(config)#access-list DMZ_IN extended deny ip 172.16.1.0 255.255.255.0 192.168.10.0 255.255.255.0
+FW1(config)#access-list DMZ_IN extended permit tcp host 172.16.1.10 any eq www
+FW1(config)#access-list DMZ_IN extended permit tcp host 172.16.1.10 any eq https
+FW1(config)#access-list DMZ_IN extended permit icmp 172.16.1.0 255.255.255.0 any
+FW1(config)#access-list DMZ_IN extended deny ip any any
+FW1(config)#access-group DMZ_IN in interface dmz
+! 6. Inspection ICMP : les réponses de ping reviennent sans règle supplémentaire
+FW1(config)#policy-map global_policy
+FW1(config-pmap)#class inspection_default
+FW1(config-pmap-c)#inspect icmp
+FW1(config-pmap-c)#exit
+FW1(config-pmap)#exit
+FW1(config)#end
+FW1#write memory` },
+    { appareil: "R-ISP — routeur Cisco 2911 (fournisseur d’accès simulé)", lignes: `Router>enable
+Router#configure terminal
+Router(config)#hostname R-ISP
+R-ISP(config)#no ip domain-lookup
+R-ISP(config)#enable secret cisco
+R-ISP(config)#interface gigabitEthernet 0/0
+R-ISP(config-if)#description Lien vers FW1 outside
+R-ISP(config-if)#ip address 10.10.10.1 255.255.255.0
+R-ISP(config-if)#no shutdown
+R-ISP(config-if)#exit
+R-ISP(config)#interface gigabitEthernet 0/1
+R-ISP(config-if)#description Internet simule vers SW-EXT
+R-ISP(config-if)#ip address 10.20.20.1 255.255.255.0
+R-ISP(config-if)#no shutdown
+R-ISP(config-if)#exit
+! Routes de laboratoire : permettent à PC-EXT de viser les adresses réelles internes, pour prouver que c’est le pare-feu qui bloque
+R-ISP(config)#ip route 192.168.10.0 255.255.255.0 10.10.10.2
+R-ISP(config)#ip route 172.16.1.0 255.255.255.0 10.10.10.2
+R-ISP(config)#end
+R-ISP#write memory` },
+    { appareil: "SW-IN — switch Cisco 2960 (LAN)", lignes: `Switch>enable
+Switch#configure terminal
+Switch(config)#hostname SW-IN
+SW-IN(config)#no ip domain-lookup
+SW-IN(config)#enable secret cisco
+SW-IN(config)#interface vlan 1
+SW-IN(config-if)#ip address 192.168.10.2 255.255.255.0
+SW-IN(config-if)#no shutdown
+SW-IN(config-if)#exit
+SW-IN(config)#ip default-gateway 192.168.10.1
+! Ports inutilisés désactivés
+SW-IN(config)#interface range fastEthernet 0/3 - 24
+SW-IN(config-if-range)#shutdown
+SW-IN(config-if-range)#exit
+SW-IN(config)#interface gigabitEthernet 0/2
+SW-IN(config-if)#shutdown
+SW-IN(config-if)#exit
+SW-IN(config)#end
+SW-IN#write memory` },
+    { appareil: "SW-EXT — switch Cisco 2960 (Internet simulé)", lignes: `Switch>enable
+Switch#configure terminal
+Switch(config)#hostname SW-EXT
+SW-EXT(config)#no ip domain-lookup
+SW-EXT(config)#enable secret cisco
+SW-EXT(config)#interface vlan 1
+SW-EXT(config-if)#ip address 10.20.20.2 255.255.255.0
+SW-EXT(config-if)#no shutdown
+SW-EXT(config-if)#exit
+SW-EXT(config)#ip default-gateway 10.20.20.1
+SW-EXT(config)#interface range fastEthernet 0/3 - 24
+SW-EXT(config-if-range)#shutdown
+SW-EXT(config-if-range)#exit
+SW-EXT(config)#interface gigabitEthernet 0/2
+SW-EXT(config-if)#shutdown
+SW-EXT(config-if)#exit
+SW-EXT(config)#end
+SW-EXT#write memory` }
+  ],
+  configNotes: [
+    "PC et serveurs : pas de CLI Cisco. Saisir l’adresse, le masque et la passerelle du tableau d’adressage dans Desktop > IP Configuration. Allumer le service HTTP (et HTTPS) de SRV-WEB et de SRV-INT dans l’onglet Services.",
+    "Dans les ACL de l’ASA 9.x, la destination est l’adresse réelle du serveur (objet WEB-SERVER = 172.16.1.10), pas l’adresse traduite 10.10.10.10.",
+    "Limite connue de Packet Tracer : après la fermeture et la réouverture du fichier, la global_policy peut revenir à sa valeur par défaut. Si le ping de retour ne fonctionne plus, vérifier avec show running-config policy-map et refaire inspect icmp."
+  ],
+  tests: [
+    { titre: "Test 1 — le LAN sort (depuis PC1)", lignes: `C:\\>ping 172.16.1.10
+C:\\>ping 10.20.20.20` },
+    { titre: "Test 2 — Internet vers la DMZ et vers le LAN (depuis PC-EXT)", lignes: `C:\\>ping 10.10.10.10
+C:\\>ping 172.16.1.10
+C:\\>ping 192.168.10.10` },
+    { titre: "Test 3 — la DMZ n’atteint pas le LAN (depuis SRV-WEB, Command Prompt)", lignes: `C:\\>ping 192.168.10.10
+C:\\>ping 10.20.20.20` },
+    { titre: "Contrôles sur le pare-feu", lignes: `FW1#show interface ip brief
+FW1#show nameif
+FW1#show route
+FW1#show access-list
+FW1#show xlate
+FW1#show conn` }
+  ],
+  testsNotes: [
+    "Test 1 : les deux pings réussissent (le premier peut perdre un paquet le temps de la résolution ARP). Dans Desktop > Web Browser, http://172.16.1.10 et http://10.20.20.20 affichent la page du serveur. show xlate sur FW1 montre alors la traduction PAT de 192.168.10.10 vers 10.10.10.2.",
+    "Test 2 : les trois pings échouent (Request timed out) car OUTSIDE_IN ne laisse passer que TCP 80 et 443 vers le serveur web. En revanche http://10.10.10.10 ouvre la page du serveur web de la DMZ. Les adresses réelles 172.16.1.10 et 192.168.10.10 restent inaccessibles : c’est le pare-feu qui bloque, grâce aux routes de laboratoire de R-ISP.",
+    "Test 3 : le ping vers 192.168.10.10 échoue (deny de DMZ_IN, et niveau 70 vers 100 bloqué par défaut) ; le ping vers 10.20.20.20 réussit (ICMP autorisé par DMZ_IN, puis PAT).",
+    "show access-list affiche les compteurs « hitcnt » de OUTSIDE_IN et DMZ_IN : ils montrent quelle règle a servi. Certaines commandes show peuvent être limitées dans Packet Tracer : se référer alors à show running-config."
+  ],
+  qcm: [
+    { q: "Sur le pare-feu FW1, à quoi sert l’interface Gi1/3 dans ce TP ?", o: ["À relier le LAN interne", "À relier la DMZ qui héberge le serveur web", "À relier le routeur du fournisseur d’accès", "À administrer le pare-feu à distance"], r: 1, e: "Gi1/3 porte le nom dmz (172.16.1.1). Gi1/2 est inside et Gi1/1 est outside." },
+    { q: "Quel niveau de sécurité est attribué à l’interface « outside » ?", o: ["0", "50", "70", "100"], r: 0, e: "outside est la zone la moins fiable : niveau 0. inside vaut 100 et dmz vaut 70." },
+    { q: "Sans ACL, que devient un paquet initié depuis inside (niveau 100) vers dmz (niveau 70) ?", o: ["Il est bloqué par défaut", "Seul le ping est autorisé", "Il est autorisé, car on va d’un niveau élevé vers un niveau plus bas", "Il est autorisé seulement après une règle NAT"], r: 2, e: "L’ASA laisse passer par défaut du niveau le plus élevé vers le plus faible, et bloque l’inverse." },
+    { q: "Quelle commande donne le nom « dmz » à une interface de l’ASA ?", o: ["hostname dmz", "description dmz", "vlan dmz", "nameif dmz"], r: 3, e: "nameif attribue le nom logique utilisé ensuite dans les règles, par exemple nat (dmz,outside)." },
+    { q: "Dans l’objet LAN-NET, quelle ligne active le PAT vers l’adresse de l’interface outside ?", o: ["nat (inside,outside) dynamic interface", "nat (outside,inside) static interface", "ip nat inside source list 1 overload", "ip nat pool outside"], r: 0, e: "Syntaxe ASA 9.x : nat (interface source, interface destination) dynamic interface. Les deux dernières sont des syntaxes de routeur IOS." },
+    { q: "Quelle adresse un visiteur d’Internet utilise-t-il pour joindre le serveur web de la DMZ ?", o: ["172.16.1.10", "192.168.10.10", "10.10.10.10", "10.20.20.20"], r: 2, e: "Le NAT statique traduit l’adresse réelle 172.16.1.10 en 10.10.10.10, l’adresse visible de l’extérieur." },
+    { q: "Que fait l’ACL OUTSIDE_IN ?", o: ["Elle autorise tout le trafic vers le LAN", "Elle autorise le ping vers la DMZ", "Elle autorise le SSH vers le pare-feu", "Elle autorise HTTP et HTTPS vers le serveur web de la DMZ"], r: 3, e: "Seules deux lignes permit existent : TCP 80 et TCP 443 vers l’objet WEB-SERVER. Le reste tombe dans le deny final." },
+    { q: "Dans OUTSIDE_IN (ASA 9.x), quelle destination faut-il écrire pour viser le serveur web ?", o: ["L’adresse traduite 10.10.10.10", "L’adresse réelle 172.16.1.10 (objet WEB-SERVER)", "L’adresse du routeur 10.10.10.1", "L’adresse du LAN 192.168.10.1"], r: 1, e: "Depuis la version 8.3, l’ACL est évaluée avec l’adresse réelle du serveur, après la traduction." },
+    { q: "Quelle commande applique l’ACL OUTSIDE_IN en entrée de l’interface outside ?", o: ["access-group OUTSIDE_IN in interface outside", "ip access-group OUTSIDE_IN in", "access-class OUTSIDE_IN in", "apply acl OUTSIDE_IN outside"], r: 0, e: "Sur ASA : access-group nom in interface nameif. ip access-group est la syntaxe d’un routeur IOS." },
+    { q: "PC-EXT n’arrive pas à pinguer 10.10.10.10 mais ouvre la page web. Pourquoi ?", o: ["Le câble est défectueux", "Le serveur web est éteint", "OUTSIDE_IN n’autorise que TCP 80 et 443 vers ce serveur : l’ICMP est refusé", "Le PAT est désactivé"], r: 2, e: "Le web passe (règles permit), le ping est de l’ICMP : il tombe dans deny ip any any." },
+    { q: "À quoi sert « inspect icmp » dans la global_policy ?", o: ["À chiffrer les paquets ICMP", "À bloquer tous les pings", "À traduire l’ICMP en HTTP", "À laisser revenir les réponses ICMP des échanges lancés depuis l’intérieur"], r: 3, e: "L’inspection mémorise la requête sortante et autorise automatiquement la réponse correspondante." },
+    { q: "Sans aucune ACL, que devient un paquet initié depuis dmz (70) vers inside (100) ?", o: ["Il est autorisé", "Il est bloqué, car on va d’un niveau plus bas vers un niveau plus haut", "Seul l’ICMP passe", "Il est traduit par PAT puis autorisé"], r: 1, e: "Le deny de DMZ_IN rend ce blocage explicite et visible dans les compteurs, mais il est déjà bloqué par défaut." },
+    { q: "Quel est le rôle principal d’un pare-feu ?", o: ["Filtrer le trafic réseau selon des règles de sécurité", "Attribuer des adresses IP aux machines", "Traduire les noms de domaine en adresses IP", "Amplifier le signal Wi-Fi"], r: 0, e: "Un pare-feu autorise ou refuse les flux selon une politique de sécurité." },
+    { q: "Qu’est-ce qu’un pare-feu « à états » (stateful) ?", o: ["Il ne regarde que les adresses MAC", "Il mémorise l’état des connexions et autorise automatiquement le trafic retour légitime", "Il chiffre toutes les communications", "Il demande une règle pour chaque paquet de retour"], r: 1, e: "Grâce à sa table de connexions (show conn), le retour d’un échange autorisé n’a pas besoin de règle." },
+    { q: "Quel port TCP utilise HTTPS par défaut ?", o: ["21", "80", "443", "25"], r: 2, e: "21 : FTP, 80 : HTTP, 25 : SMTP." },
+    { q: "Laquelle de ces adresses est une adresse privée (RFC 1918) ?", o: ["11.0.0.1", "172.32.0.1", "192.169.1.1", "172.16.5.4"], r: 3, e: "La plage privée de classe B va de 172.16.0.0 à 172.31.255.255 ; 172.32.0.1 est déjà publique." },
+    { q: "Quel est l’intérêt d’une DMZ ?", o: ["Isoler les serveurs accessibles depuis Internet du réseau local pour limiter les dégâts en cas de compromission", "Augmenter le débit du réseau", "Remplacer le serveur DHCP", "Sauvegarder les données des utilisateurs"], r: 0, e: "Si le serveur de la DMZ est attaqué, le LAN reste protégé par le pare-feu." },
+    { q: "Que fait le PAT (NAT avec surcharge) ?", o: ["Il chiffre le trafic", "Il permet à plusieurs hôtes privés de partager une seule adresse en distinguant les ports", "Il attribue automatiquement des adresses IP", "Il filtre les virus"], r: 1, e: "Chaque connexion reçoit un port source différent : c’est ce que montre show xlate." },
+    { q: "Que se passe-t-il à la fin de toute ACL ?", o: ["Un permit ip any any implicite", "Un journal d’événements est créé", "Un deny ip any any implicite", "Rien de particulier"], r: 2, e: "Tout ce qui n’est pas explicitement autorisé est refusé : c’est le refus implicite." },
+    { q: "Appliquer le principe du moindre privilège dans une règle de pare-feu, c’est :", o: ["Tout autoriser puis bloquer au cas par cas", "Bloquer même les administrateurs", "Autoriser tout le trafic sortant uniquement", "N’autoriser que ce qui est strictement nécessaire"], r: 3, e: "Ici : seulement TCP 80 et 443 vers un seul serveur, et rien d’autre depuis Internet." }
+  ]
+};
+
+const L = ["A", "B", "C", "D"];
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function table(t) {
+  const w = el("div", "wrap"), tb = el("table"), th = el("thead"), tr = el("tr");
+  t.entetes.forEach(h => tr.append(el("th", "", h))); th.append(tr); tb.append(th);
+  const body = el("tbody");
+  t.lignes.forEach(r => { const row = el("tr"); r.forEach(c => row.append(el("td", "", c))); body.append(row); });
+  tb.append(body); w.append(tb); return w;
+}
+const PROMPT = /^([^\s>#]+(?:\([^)]*\))?[>#])(.*)$/;
+function code(titre, texte, h) {
+  const box = el("div", "code"); box.style.setProperty("--h", h);
+  const bar = el("div", "bar"); bar.append(el("span", "", titre));
+  const btn = el("button", "", "Copier les commandes"); btn.type = "button"; bar.append(btn);
+  const pre = el("pre"); const cmds = [];
+  texte.split("\n").forEach((ligne, i) => {
+    if (i) pre.append("\n");
+    if (ligne.trim().startsWith("!")) { pre.append(el("span", "c", ligne)); return; }
+    const m = ligne.match(PROMPT);
+    if (m) { pre.append(el("span", "p", m[1]), el("span", "m", m[2])); cmds.push(m[2]); }
+    else { pre.append(ligne); }
+  });
+  btn.onclick = async () => {
+    const t = cmds.join("\n");
+    try { await navigator.clipboard.writeText(t); btn.textContent = "Copié ✔"; }
+    catch (e) { const ta = el("textarea"); ta.value = t; document.body.append(ta); ta.select(); try { document.execCommand("copy"); btn.textContent = "Copié ✔"; } catch (e2) { btn.textContent = "Copie impossible"; } ta.remove(); }
+    setTimeout(() => btn.textContent = "Copier les commandes", 1800);
+  };
+  box.append(bar, pre); return box;
+}
+function P(id) { return document.getElementById(id); }
+function hue(id) { return P(id).dataset.h; }
+
+document.title = TP.titre; P("titre").textContent = TP.titre; P("soustitre").textContent = TP.sousTitre;
+
+(function () {
+  const s = P("enonce"); s.append(el("h2", "", "Énoncé du TP"));
+  TP.enonce.forEach(t => s.append(el("p", "", t)));
+  s.append(el("h3", "", "Objectifs")); const ul = el("ul", "obj"); TP.objectifs.forEach(o => ul.append(el("li", "", o))); s.append(ul);
+  s.append(el("h3", "", "Matériel")); const um = el("ul", "obj"); TP.materiel.forEach(o => um.append(el("li", "", o))); s.append(um);
+})();
+
+(function () {
+  const s = P("adressage"); s.append(el("h2", "", "Plan d’adressage"));
+  s.append(el("h3", "", "Réseaux")); s.append(table(TP.reseaux));
+  s.append(el("h3", "", "Adresses des appareils")); s.append(table(TP.adressage));
+  s.append(el("h3", "", "Table des liens (câblage)")); s.append(table(TP.liens));
+  if (TP.flux) { s.append(el("h3", "", "Politique de filtrage (matrice des flux)")); s.append(table(TP.flux)); }
+})();
+
+(function () {
+  const s = P("config"); s.append(el("h2", "", "Configuration CLI"));
+  s.append(el("div", "note", "Chaque commande est précédée de son prompt. Le bouton « Copier » ne copie que les commandes, sans les prompts."));
+  TP.configs.forEach(c => s.append(code(c.appareil, c.lignes, hue("config"))));
+  (TP.configNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+(function () {
+  const s = P("tests"); s.append(el("h2", "", "Vérifications et tests"));
+  TP.tests.forEach(t => s.append(code(t.titre, t.lignes, hue("tests"))));
+  (TP.testsNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+(function () {
+  const s = P("qcm"); s.append(el("h2", "", "QCM — " + TP.qcm.length + " questions"));
+  const cards = [];
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    q.o.forEach((o, j) => {
+      const lab = el("label"); const r = el("input"); r.type = "radio"; r.name = "q" + i; r.value = j;
+      lab.append(r, " " + L[j] + ". " + o); c.append(lab);
+    });
+    cards.push(c); s.append(c);
+  });
+  const btn = el("button", "btn", "Valider mes réponses"); btn.type = "button";
+  const sc = el("span"); sc.id = "score"; sc.setAttribute("aria-live", "polite");
+  btn.onclick = () => {
+    let ok = 0;
+    TP.qcm.forEach((q, i) => {
+      const ch = document.querySelector('input[name="q' + i + '"]:checked');
+      const good = ch && Number(ch.value) === q.r; if (good) ok++;
+      cards[i].classList.toggle("ok", !!good); cards[i].classList.toggle("ko", !good);
+    });
+    sc.textContent = "Score : " + ok + " / " + TP.qcm.length + " — explications dans l’onglet Corrigé";
+  };
+  s.append(btn, sc);
+})();
+
+(function () {
+  const s = P("corrige"); s.append(el("h2", "", "Corrigé du QCM"));
+  const g = el("p", "grille", TP.qcm.map((q, i) => (i + 1) + "-" + L[q.r]).join("  ·  ")); s.append(g);
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    c.append(el("div", "", "Réponse " + L[q.r] + " — " + q.o[q.r])); c.append(el("div", "note", q.e)); s.append(c);
+  });
+})();
+
+const panels = Array.from(document.querySelectorAll("section.panel")), nav = P("tabs");
+panels.forEach((p, i) => {
+  p.style.setProperty("--h", p.dataset.h);
+  const b = el("button", "tab", p.dataset.label); b.type = "button"; b.setAttribute("role", "tab");
+  b.style.setProperty("--h", p.dataset.h); b.onclick = () => show(i); nav.append(b);
+});
+function show(i, noHash) {
+  panels.forEach((p, j) => { p.hidden = j !== i; nav.children[j].classList.toggle("on", j === i); nav.children[j].setAttribute("aria-selected", j === i ? "true" : "false"); });
+  if (!noHash) { try { history.replaceState(null, "", "#" + panels[i].id); } catch (e) {} }
+}
+function fromHash() { const k = panels.findIndex(p => "#" + p.id === location.hash); show(k < 0 ? 0 : k, true); }
+window.addEventListener("hashchange", fromHash); fromHash();
+</script>
+</body>
+</html>

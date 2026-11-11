@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculateur d’énergie électrique</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#1d2433;--muted:#5d6779;--line:#dde3ee;--accent:#2563eb;--a2:#e8f0ff;--ok:#0f766e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1420;--card:#182033;--text:#e8ecf5;--muted:#9aa5bb;--line:#2a3550;--accent:#6ea0ff;--a2:#1e2b4a;--ok:#5eead4}}
+:root[data-theme="dark"]{--bg:#0f1420;--card:#182033;--text:#e8ecf5;--muted:#9aa5bb;--line:#2a3550;--accent:#6ea0ff;--a2:#1e2b4a;--ok:#5eead4}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+main{max-width:560px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:1.4rem;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 18px;font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+label{display:block;font-weight:600;font-size:.9rem;margin:12px 0 4px}
+label:first-child{margin-top:0}
+.row{display:flex;gap:8px}
+input,select{width:100%;padding:10px 12px;font-size:1rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}
+select{width:auto}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.res{display:grid;gap:10px}
+.item{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:var(--a2);border-radius:10px;padding:12px 14px}
+.item span{color:var(--muted);font-size:.9rem}
+.item b{font-size:1.2rem;color:var(--accent);text-align:right;word-break:break-all}
+.item.cost b{color:var(--ok)}
+.note{color:var(--muted);font-size:.8rem;margin-top:10px}
+.err{color:#dc2626;font-size:.85rem;min-height:1.2em;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>⚡ Énergie électrique et coût</h1>
+<p class="sub">Entrez la puissance, le prix du kWh et la durée d’utilisation.</p>
+
+<div class="card">
+<label for="p">Puissance</label>
+<div class="row">
+<input id="p" type="number" inputmode="decimal" min="0" step="any" value="100">
+<select id="u" aria-label="Unité de puissance"><option value="1">W</option><option value="1000">kW</option></select>
+</div>
+<label for="prix">Prix du kWh (€)</label>
+<input id="prix" type="number" inputmode="decimal" min="0" step="any" value="0.25">
+<label for="j">Durée d’utilisation (jours)</label>
+<input id="j" type="number" inputmode="decimal" min="0" step="any" value="30">
+<label for="h">Heures d’utilisation par jour</label>
+<input id="h" type="number" inputmode="decimal" min="0" max="24" step="any" value="24">
+<div class="err" id="err"></div>
+</div>
+
+<div class="card res" aria-live="polite">
+<div class="item"><span>Énergie</span><b id="kwh">–</b></div>
+<div class="item"><span>Énergie</span><b id="kj">–</b></div>
+<div class="item"><span>Énergie</span><b id="cal">–</b></div>
+<div class="item"><span>Énergie (kilocalories)</span><b id="kcal">–</b></div>
+<div class="item cost"><span>Coût total</span><b id="cout">–</b></div>
+<div class="note">Énergie (kWh) = puissance (kW) × heures par jour × jours. 1 kWh = 3 600 kJ. 1 cal = 4,184 J.</div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const nf=(v,d)=>v.toLocaleString("fr-FR",{maximumFractionDigits:d});
+function calc(){
+  const p=parseFloat($("p").value)*parseFloat($("u").value)/1000;
+  const prix=parseFloat($("prix").value),j=parseFloat($("j").value),h=parseFloat($("h").value);
+  const ok=[p,prix,j,h].every(v=>isFinite(v)&&v>=0)&&h<=24;
+  $("err").textContent=ok?"":"Vérifiez les valeurs : nombres positifs, heures par jour ≤ 24.";
+  if(!ok){["kwh","kj","cal","kcal","cout"].forEach(i=>$(i).textContent="–");return;}
+  const kwh=p*h*j, kj=kwh*3600, cal=kj*1000/4.184;
+  $("kwh").textContent=nf(kwh,3)+" kWh";
+  $("kj").textContent=nf(kj,2)+" kJ";
+  $("cal").textContent=nf(cal,0)+" cal";
+  $("kcal").textContent=nf(cal/1000,2)+" kcal";
+  $("cout").textContent=nf(kwh*prix,2)+" €";
+}
+document.querySelectorAll("input,select").forEach(e=>e.addEventListener("input",calc));
+calc();
+</script>
+</body>
+</html>

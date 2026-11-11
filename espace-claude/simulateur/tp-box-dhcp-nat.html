@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TP Box, DHCP et NAT</title>
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--txt:#1b2333;--mut:#5a6479;--bd:#d9dfeb;
+  --code:#0f1722;--codetxt:#d7e0ee;--prompt:#ffd166;--cmd:#8ee6a8;--cmt:#7f8da6;
+  --l:40%;--tint:95%;--ok:#1e8e4e;--ko:#c0392b;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+}
+:root[data-theme="dark"]{--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header.top{padding:22px 20px 8px;max-width:1100px;margin:0 auto}
+header.top h1{margin:0 0 4px;font-size:1.6rem}
+header.top p{margin:0;color:var(--mut)}
+#tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:1100px;margin:14px auto 0;padding:0 20px}
+.tab{--c:hsl(var(--h) 65% var(--l));border:2px solid var(--c);background:transparent;color:var(--c);font:inherit;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer}
+.tab.on{background:var(--c);color:#fff}
+.tab:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+main{max-width:1100px;margin:14px auto 40px;padding:0 20px}
+section.panel{--c:hsl(var(--h) 65% var(--l));background:var(--card);border:1px solid var(--bd);border-top:6px solid var(--c);border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+section.panel[hidden]{display:none}
+section.panel h2{margin:0 0 12px;color:var(--c)}
+section.panel h3{margin:18px 0 8px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{border:1px solid var(--bd);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:hsl(var(--h) 60% var(--tint));color:var(--txt)}
+ul.obj{padding-left:20px}
+.code{border-radius:10px;overflow:hidden;margin:12px 0;background:var(--code)}
+.code .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:hsl(var(--h) 55% 30%);color:#fff;font-weight:600}
+.code .bar button{font:inherit;font-size:.85rem;border:0;border-radius:6px;padding:4px 10px;cursor:pointer;background:#ffffff26;color:#fff}
+.code pre{margin:0;padding:12px 14px;overflow-x:auto;color:var(--codetxt);font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.code .p{color:var(--prompt)}.code .m{color:var(--cmd)}.code .c{color:var(--cmt);font-style:italic}
+.note{border-left:4px solid var(--c);background:hsl(var(--h) 60% var(--tint));padding:8px 12px;border-radius:6px;margin:10px 0}
+/* schéma */
+.schema{overflow-x:auto}
+.schema svg{width:100%;min-width:720px;height:auto;display:block}
+.schema text{fill:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.schema .nm{font-weight:700;font-size:15px;fill:#fff}
+.schema .if{font-size:12px;font-weight:600}
+.schema .ip{font-size:12px;fill:var(--mut)}
+.schema .lk{stroke:var(--mut);stroke-width:2.5;fill:none}
+.schema .tr{stroke:#e74c3c;stroke-width:5;stroke-dasharray:10 6;fill:none}
+.schema .ifbg{fill:var(--card);stroke:var(--bd)}
+/* qcm */
+.q{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:12px 0}
+.q.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.q.ko{border-color:var(--ko);background:color-mix(in srgb,var(--ko) 12%,transparent)}
+.q p{margin:0 0 8px;font-weight:600}
+.q label{display:block;padding:4px 6px;border-radius:6px;cursor:pointer}
+.q label:hover{background:hsl(var(--h) 60% var(--tint))}
+.btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:10px 18px;background:var(--c);color:#fff;cursor:pointer}
+#score{font-weight:700;margin-left:12px}
+.grille{font-family:ui-monospace,Menlo,Consolas,monospace;word-spacing:6px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 id="titre"></h1>
+  <p id="soustitre"></p>
+</header>
+<nav id="tabs" role="tablist" aria-label="Sections du TP"></nav>
+<main>
+  <section class="panel" id="enonce"   data-label="📘 Énoncé"          data-h="215"></section>
+  <section class="panel" id="schema"   data-label="🗺️ Schéma"          data-h="28">
+    <h2>Schéma de la topologie</h2>
+    <div class="schema">
+<svg viewBox="0 0 960 520" role="img" aria-label="Topologie du TP : 4 PC, switch, box, routeur FAI et serveur Web">
+  <rect x="14" y="20" width="470" height="420" rx="16" fill="#27ae60" fill-opacity=".07" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <path class="lk" d="M140 100 L240 185"/>
+  <path class="lk" d="M140 190 L240 215"/>
+  <path class="lk" d="M140 280 L240 255"/>
+  <path class="lk" d="M140 370 L240 285"/>
+  <path class="lk" d="M360 235 L490 235"/>
+  <path d="M610 235 L740 235" stroke="#d63384" stroke-width="6" fill="none"/>
+  <path d="M805 275 L805 360" stroke="#8e44ad" stroke-width="4" fill="none"/>
+  <rect x="30" y="76" width="110" height="48" rx="12" fill="#27ae60"/><text class="nm" x="85" y="105" text-anchor="middle">PC1</text>
+  <rect x="30" y="166" width="110" height="48" rx="12" fill="#27ae60"/><text class="nm" x="85" y="195" text-anchor="middle">PC2</text>
+  <rect x="30" y="256" width="110" height="48" rx="12" fill="#27ae60"/><text class="nm" x="85" y="285" text-anchor="middle">PC3</text>
+  <rect x="30" y="346" width="110" height="48" rx="12" fill="#27ae60"/><text class="nm" x="85" y="375" text-anchor="middle">PC4</text>
+  <rect x="240" y="165" width="120" height="140" rx="14" fill="#2f80ed"/><text class="nm" x="300" y="232" text-anchor="middle">SW1</text><text class="nm" x="300" y="252" text-anchor="middle" style="font-size:12px;font-weight:500">Cisco 2960</text>
+  <rect x="490" y="195" width="120" height="80" rx="14" fill="#f28c28"/><text class="nm" x="550" y="225" text-anchor="middle">Box</text><text class="nm" x="550" y="244" text-anchor="middle" style="font-size:12px;font-weight:500">Cisco 2911</text><text class="nm" x="550" y="262" text-anchor="middle" style="font-size:11px;font-weight:500">NAT/PAT · DHCP</text>
+  <rect x="740" y="195" width="130" height="80" rx="14" fill="#f28c28"/><text class="nm" x="805" y="225" text-anchor="middle">FAI</text><text class="nm" x="805" y="244" text-anchor="middle" style="font-size:12px;font-weight:500">Cisco 2911</text><text class="nm" x="805" y="262" text-anchor="middle" style="font-size:11px;font-weight:500">Internet (simulé)</text>
+  <rect x="740" y="360" width="130" height="60" rx="12" fill="#8e44ad"/><text class="nm" x="805" y="387" text-anchor="middle">SRV-WEB</text><text class="nm" x="805" y="406" text-anchor="middle" style="font-size:12px;font-weight:500">HTTP + DNS</text>
+  <text class="ip" x="85" y="142" text-anchor="middle">DHCP (.50 à .200)</text>
+  <text class="ip" x="85" y="232" text-anchor="middle">DHCP (.50 à .200)</text>
+  <text class="ip" x="85" y="322" text-anchor="middle">DHCP (.50 à .200)</text>
+  <text class="ip" x="85" y="412" text-anchor="middle">DHCP (.50 à .200)</text>
+  <text class="ip" x="486" y="264" text-anchor="end">192.168.1.1</text>
+  <text class="ip" x="614" y="264">88.89.90.91</text>
+  <text class="ip" x="738" y="216" text-anchor="end">88.89.90.89</text>
+  <text class="ip" x="832" y="297">10.10.10.1</text>
+  <text class="ip" x="832" y="346">10.10.10.10</text>
+  <text class="ip" x="832" y="321" style="fill:#8e44ad;font-weight:700">10.10.10.0/24</text>
+  <text class="ip" x="675" y="180" text-anchor="middle" style="fill:#d63384;font-weight:700">Lien public 88.89.90.88/29</text>
+  <text class="ip" x="28" y="42" style="fill:#27ae60;font-weight:700">LAN 192.168.1.0/24</text>
+  <rect class="ifbg" x="146" y="109" width="32" height="20" rx="5"/><text x="162" y="123" text-anchor="middle">Fa0</text>
+  <rect class="ifbg" x="192" y="151" width="45" height="20" rx="5"/><text x="214" y="165" text-anchor="middle">Fa0/1</text>
+  <rect class="ifbg" x="146" y="186" width="32" height="20" rx="5"/><text x="162" y="200" text-anchor="middle">Fa0</text>
+  <rect class="ifbg" x="192" y="198" width="45" height="20" rx="5"/><text x="214" y="212" text-anchor="middle">Fa0/2</text>
+  <rect class="ifbg" x="146" y="264" width="32" height="20" rx="5"/><text x="162" y="278" text-anchor="middle">Fa0</text>
+  <rect class="ifbg" x="192" y="252" width="45" height="20" rx="5"/><text x="214" y="266" text-anchor="middle">Fa0/3</text>
+  <rect class="ifbg" x="146" y="341" width="32" height="20" rx="5"/><text x="162" y="355" text-anchor="middle">Fa0</text>
+  <rect class="ifbg" x="192" y="299" width="45" height="20" rx="5"/><text x="214" y="313" text-anchor="middle">Fa0/4</text>
+  <rect class="ifbg" x="364" y="225" width="45" height="20" rx="5"/><text x="386" y="239" text-anchor="middle">Gi0/1</text>
+  <rect class="ifbg" x="442" y="225" width="45" height="20" rx="5"/><text x="464" y="239" text-anchor="middle">Gi0/0</text>
+  <rect class="ifbg" x="614" y="225" width="45" height="20" rx="5"/><text x="636" y="239" text-anchor="middle">Gi0/1</text>
+  <rect class="ifbg" x="692" y="225" width="45" height="20" rx="5"/><text x="714" y="239" text-anchor="middle">Gi0/0</text>
+  <rect class="ifbg" x="782" y="283" width="45" height="20" rx="5"/><text x="805" y="297" text-anchor="middle">Gi0/1</text>
+  <rect class="ifbg" x="789" y="332" width="32" height="20" rx="5"/><text x="805" y="346" text-anchor="middle">Fa0</text>
+  <g font-size="12">
+    <rect x="30" y="468" width="14" height="14" rx="3" fill="#f28c28"/><text x="50" y="480">Routeur</text>
+    <rect x="125" y="468" width="14" height="14" rx="3" fill="#2f80ed"/><text x="145" y="480">Switch</text>
+    <rect x="205" y="468" width="14" height="14" rx="3" fill="#27ae60"/><text x="225" y="480">PC (LAN 192.168.1.0/24)</text>
+    <rect x="420" y="468" width="14" height="14" rx="3" fill="#8e44ad"/><text x="440" y="480">Serveur Web (10.10.10.0/24)</text>
+    <line x1="30" y1="503" x2="70" y2="503" stroke="#d63384" stroke-width="6"/><text x="78" y="507">Liaison publique Box / FAI</text>
+    <line x1="290" y1="503" x2="330" y2="503" stroke="#7f8da6" stroke-width="2.5"/><text x="338" y="507">Câble Ethernet du LAN</text>
+    <line x1="520" y1="503" x2="560" y2="503" stroke="#8e44ad" stroke-width="4"/><text x="568" y="507">Câble FAI / serveur</text>
+  </g>
+</svg>
+    </div>
+  </section>
+
+  <section class="panel" id="adressage" data-label="🔢 Adressage"       data-h="160"></section>
+  <section class="panel" id="config"    data-label="⌨️ Config CLI"       data-h="270"></section>
+  <section class="panel" id="tests"     data-label="✅ Vérifications"    data-h="340"></section>
+  <section class="panel" id="qcm"       data-label="📝 QCM"              data-h="45"></section>
+  <section class="panel" id="corrige"   data-label="🔑 Corrigé"          data-h="0"></section>
+</main>
+
+<script>
+/* ===================== DONNÉES À REMPLACER ===================== */
+const TP = {
+  titre: "TP Box, DHCP et NAT",
+  sousTitre: "LAN de 4 PC et serveur Web distant · Cisco Packet Tracer · niveau bac pro CIEL",
+  enonce: [
+    "Un réseau local de 4 PC accède à un serveur Web distant à travers une box. La box est la passerelle du réseau : elle distribue les adresses (serveur DHCP) et remplace les adresses privées des PC par son adresse publique (NAT/PAT).",
+    "Imposé par l’énoncé : adresse interne de la box 192.168.1.1, plage DHCP de 192.168.1.50 à 192.168.1.200, adresse publique de la box 88.89.90.91. Tout le reste est choisi.",
+    "Hypothèses : le lien Box / FAI est un réseau 88.89.90.88/29 pour que 88.89.90.91 en soit une adresse valide. Le routeur FAI simule Internet et le serveur Web est placé derrière lui, dans le réseau privé 10.10.10.0/24. Le serveur fait aussi DNS pour www.monsite.com."
+  ],
+  objectifs: [
+    "Configurer la Box : interfaces, serveur DHCP, NAT/PAT et route par défaut",
+    "Configurer le routeur FAI qui relie la Box au serveur",
+    "Configurer le serveur Web (HTTP) et son DNS",
+    "Mettre les 4 PC en DHCP et vérifier qu’ils reçoivent une adresse entre .50 et .200",
+    "Valider l’accès au serveur par ping et par le navigateur, puis lire la table NAT"
+  ],
+  materiel: ["1 routeur Cisco 2911 nommé Box", "1 routeur Cisco 2911 nommé FAI", "1 switch Cisco 2960-24TT nommé SW1", "4 PC-PT (PC1 à PC4)", "1 serveur Server-PT nommé SRV-WEB"],
+  reseaux: {
+    entetes: ["Réseau", "Adresse", "Masque", "Passerelle", "Plage hôtes"],
+    lignes: [
+      ["LAN (PC)", "192.168.1.0", "255.255.255.0 (/24)", "192.168.1.1", "192.168.1.1 – .254 (DHCP : .50 à .200)"],
+      ["Lien public Box / FAI", "88.89.90.88", "255.255.255.248 (/29)", "88.89.90.89 (FAI)", "88.89.90.89 – .94 (Box = .91)"],
+      ["Réseau du serveur", "10.10.10.0", "255.255.255.0 (/24)", "10.10.10.1", "10.10.10.1 – .254 (serveur = .10)"]
+    ]
+  },
+  adressage: {
+    entetes: ["Appareil", "Interface", "Adresse IP", "Masque", "Passerelle"],
+    lignes: [
+      ["Box", "Gi0/0", "192.168.1.1", "255.255.255.0", "—"],
+      ["Box", "Gi0/1", "88.89.90.91", "255.255.255.248", "88.89.90.89 (route par défaut)"],
+      ["FAI", "Gi0/0", "88.89.90.89", "255.255.255.248", "—"],
+      ["FAI", "Gi0/1", "10.10.10.1", "255.255.255.0", "—"],
+      ["SRV-WEB", "Fa0", "10.10.10.10", "255.255.255.0", "10.10.10.1"],
+      ["PC1 à PC4", "Fa0", "DHCP (192.168.1.50 à .200)", "255.255.255.0", "192.168.1.1"],
+      ["SW1", "—", "aucune (pas d’adresse de gestion)", "—", "—"]
+    ]
+  },
+  liens: {
+    entetes: ["Appareil A", "Interface A", "Appareil B", "Interface B", "Câble", "Type / réseau"],
+    lignes: [
+      ["PC1", "Fa0", "SW1", "Fa0/1", "Droit", "Accès LAN"],
+      ["PC2", "Fa0", "SW1", "Fa0/2", "Droit", "Accès LAN"],
+      ["PC3", "Fa0", "SW1", "Fa0/3", "Droit", "Accès LAN"],
+      ["PC4", "Fa0", "SW1", "Fa0/4", "Droit", "Accès LAN"],
+      ["SW1", "Gi0/1", "Box", "Gi0/0", "Droit", "LAN 192.168.1.0/24"],
+      ["Box", "Gi0/1", "FAI", "Gi0/0", "Croisé", "Lien public 88.89.90.88/29"],
+      ["FAI", "Gi0/1", "SRV-WEB", "Fa0", "Croisé", "Réseau serveur 10.10.10.0/24"]
+    ]
+  },
+  configs: [
+    { appareil: "Box — routeur Cisco 2911", lignes: `! Base
+Router>enable
+Router#configure terminal
+Router(config)#hostname Box
+Box(config)#no ip domain-lookup
+Box(config)#enable secret cisco
+Box(config)#line console 0
+Box(config-line)#password cisco
+Box(config-line)#login
+Box(config-line)#logging synchronous
+Box(config-line)#exit
+! Interface LAN (côté PC)
+Box(config)#interface gigabitEthernet 0/0
+Box(config-if)#description LAN vers SW1
+Box(config-if)#ip address 192.168.1.1 255.255.255.0
+Box(config-if)#ip nat inside
+Box(config-if)#no shutdown
+Box(config-if)#exit
+! Interface publique (côté FAI)
+Box(config)#interface gigabitEthernet 0/1
+Box(config-if)#description WAN vers FAI
+Box(config-if)#ip address 88.89.90.91 255.255.255.248
+Box(config-if)#ip nat outside
+Box(config-if)#no shutdown
+Box(config-if)#exit
+! DHCP : on exclut .1 à .49 et .201 à .254, il reste .50 à .200
+Box(config)#ip dhcp excluded-address 192.168.1.1 192.168.1.49
+Box(config)#ip dhcp excluded-address 192.168.1.201 192.168.1.254
+Box(config)#ip dhcp pool LAN
+Box(dhcp-config)#network 192.168.1.0 255.255.255.0
+Box(dhcp-config)#default-router 192.168.1.1
+Box(dhcp-config)#dns-server 10.10.10.10
+Box(dhcp-config)#exit
+! NAT/PAT : tout le LAN sort avec 88.89.90.91
+Box(config)#access-list 1 permit 192.168.1.0 0.0.0.255
+Box(config)#ip nat inside source list 1 interface gigabitEthernet 0/1 overload
+! Route par défaut vers le FAI
+Box(config)#ip route 0.0.0.0 0.0.0.0 88.89.90.89
+Box(config)#end
+Box#write memory` },
+    { appareil: "FAI — routeur Cisco 2911", lignes: `! Base
+Router>enable
+Router#configure terminal
+Router(config)#hostname FAI
+FAI(config)#no ip domain-lookup
+FAI(config)#enable secret cisco
+FAI(config)#line console 0
+FAI(config-line)#password cisco
+FAI(config-line)#login
+FAI(config-line)#logging synchronous
+FAI(config-line)#exit
+! Côté Box
+FAI(config)#interface gigabitEthernet 0/0
+FAI(config-if)#description Lien vers Box
+FAI(config-if)#ip address 88.89.90.89 255.255.255.248
+FAI(config-if)#no shutdown
+FAI(config-if)#exit
+! Côté serveur
+FAI(config)#interface gigabitEthernet 0/1
+FAI(config-if)#description Reseau du serveur Web
+FAI(config-if)#ip address 10.10.10.1 255.255.255.0
+FAI(config-if)#no shutdown
+FAI(config-if)#end
+FAI#write memory` },
+    { appareil: "SW1 — switch Cisco 2960-24TT", lignes: `! Base
+Switch>enable
+Switch#configure terminal
+Switch(config)#hostname SW1
+SW1(config)#no ip domain-lookup
+SW1(config)#enable secret cisco
+! Ports des PC (VLAN 1 par défaut)
+SW1(config)#interface range fastEthernet 0/1 - 4
+SW1(config-if-range)#switchport mode access
+SW1(config-if-range)#exit
+! Port vers la Box
+SW1(config)#interface gigabitEthernet 0/1
+SW1(config-if)#description Vers Box Gi0/0
+SW1(config-if)#end
+SW1#write memory` }
+  ],
+  configNotes: [
+    "SRV-WEB (onglet Config) : FastEthernet0 = 10.10.10.10 / 255.255.255.0, passerelle 10.10.10.1, DNS 10.10.10.10. Services > HTTP : On. Services > DNS : On, avec un enregistrement A www.monsite.com → 10.10.10.10.",
+    "PC1 à PC4 (Desktop > IP Configuration) : choisir DHCP. Ils reçoivent une adresse entre 192.168.1.50 et .200, la passerelle 192.168.1.1 et le DNS 10.10.10.10.",
+    "Le routeur FAI n’a pas de route à configurer : ses deux réseaux sont directement connectés et, grâce au NAT, il ne voit que l’adresse 88.89.90.91.",
+    "Limite de Packet Tracer : si le message « Continue with configuration dialog? » apparaît au démarrage d’un routeur, répondre no. Dans la réalité, Internet n’achemine pas les adresses privées comme 10.10.10.0/24 : ici le FAI simule Internet pour le TP."
+  ],
+  tests: [
+    { titre: "Contrôles sur la Box", lignes: `Box#show ip interface brief
+Box#show ip dhcp binding
+Box#show ip nat translations
+Box#show ip route` },
+    { titre: "Contrôles sur le FAI", lignes: `FAI#show ip interface brief
+FAI#show ip route` },
+    { titre: "Tests depuis PC1 (Desktop > Command Prompt)", lignes: `C:\\>ipconfig /renew
+C:\\>ipconfig /all
+C:\\>ping 192.168.1.1
+C:\\>ping 88.89.90.89
+C:\\>ping 10.10.10.10
+C:\\>ping www.monsite.com` }
+  ],
+  testsNotes: [
+    "show ip interface brief : Gi0/0 et Gi0/1 doivent être « up / up » sur la Box et sur le FAI.",
+    "ipconfig /all : adresse entre 192.168.1.50 et .200, passerelle 192.168.1.1, DNS 10.10.10.10. Si le PC reste en 169.254.x.x, vérifier les liens verts puis refaire ipconfig /renew.",
+    "ping 10.10.10.10 et ping www.monsite.com : le serveur répond (le premier paquet peut être perdu le temps de l’ARP).",
+    "Desktop > Web Browser : http://10.10.10.10 puis http://www.monsite.com affichent la page d’accueil du serveur.",
+    "show ip nat translations : les adresses 192.168.1.x apparaissent traduites en 88.89.90.91 ; show ip dhcp binding liste les 4 baux."
+  ],
+  /* 20 questions : r = index (0=A, 1=B, 2=C, 3=D) de la bonne réponse. */
+  qcm: [
+    { q: "Quelle plage d’adresses le serveur DHCP de la Box distribue-t-il aux PC ?", o: ["192.168.1.1 à 192.168.1.254", "192.168.1.50 à 192.168.1.200", "192.168.1.2 à 192.168.1.100", "192.168.1.100 à 192.168.1.250"], r: 1, e: "La plage imposée est .50 à .200. La Box exclut .1 à .49 et .201 à .254 pour ne distribuer que cette partie." },
+    { q: "Quelle commande retire les adresses .1 à .49 de la distribution DHCP ?", o: ["ip dhcp excluded-address 192.168.1.1 192.168.1.49", "ip dhcp pool 192.168.1.1 192.168.1.49", "network 192.168.1.1 192.168.1.49", "default-router 192.168.1.1"], r: 0, e: "excluded-address se tape en configuration globale. network déclare le réseau du pool et default-router donne la passerelle : aucune des deux n’exclut d’adresses." },
+    { q: "Quelle commande active le PAT avec l’adresse publique de la Box ?", o: ["ip nat inside", "ip route 0.0.0.0 0.0.0.0 88.89.90.89", "ip nat inside source list 1 interface gigabitEthernet 0/1 overload", "ip dhcp pool LAN"], r: 2, e: "Le mot overload permet à plusieurs PC de partager 88.89.90.91, distingués par leur numéro de port. ip nat inside ne fait que repérer le côté privé d’une interface." },
+    { q: "Le prompt Box(dhcp-config)# indique que l’on est en mode :", o: ["configuration d’interface", "configuration d’un pool DHCP", "configuration globale", "mode privilégié"], r: 1, e: "On y arrive avec ip dhcp pool LAN. Le prompt d’une interface est (config-if), celui de la configuration globale (config) et celui du mode privilégié se termine par #." },
+    { q: "Quel câble relie Gi0/1 de la Box à Gi0/0 du routeur FAI ?", o: ["Câble console", "Câble série", "Câble droit", "Câble croisé"], r: 3, e: "Deux équipements de même nature (routeur–routeur) se relient en Ethernet par un câble croisé. Le câble droit relie des équipements de nature différente, comme un PC et un switch." },
+    { q: "Pourquoi 88.89.90.91 est-elle une adresse valide pour la Box ?", o: ["Elle appartient au réseau 88.89.90.88/29, dont les hôtes vont de .89 à .94", "C’est l’adresse réseau de 88.89.90.88/29", "C’est l’adresse de diffusion de 88.89.90.88/29", "C’est une adresse privée"], r: 0, e: "Un /29 contient 8 adresses : .88 est l’adresse réseau, .89 à .94 sont les hôtes et .95 est la diffusion. L’adresse .91 est donc un hôte valide." },
+    { q: "Quelle adresse source le serveur Web voit-il quand PC1 le contacte ?", o: ["192.168.1.50", "192.168.1.1", "10.10.10.1", "88.89.90.91"], r: 3, e: "La Box remplace l’adresse source privée du PC par l’adresse de son interface publique Gi0/1, soit 88.89.90.91." },
+    { q: "Que signifie ip nat inside sur l’interface Gi0/0 de la Box ?", o: ["Gi0/0 est du côté d’Internet", "Gi0/0 reçoit une adresse publique", "Gi0/0 est du côté du réseau privé, dont les adresses seront traduites", "Gi0/0 distribue les adresses DHCP"], r: 2, e: "inside désigne le côté privé et outside le côté public. Le DHCP n’est pas lié à cette commande." },
+    { q: "Un PC affiche l’adresse 169.254.12.5. Quelle est la cause probable ?", o: ["Le serveur Web est éteint", "Le PC n’a reçu aucune réponse d’un serveur DHCP", "Le NAT est mal configuré", "Le DNS est faux"], r: 1, e: "Une adresse 169.254.x.x est attribuée par le PC lui-même (APIPA) quand le DHCP ne répond pas. Il faut vérifier le câble, le port du switch et le pool DHCP de la Box." },
+    { q: "Quelle commande, tapée sur la Box, liste les baux DHCP attribués ?", o: ["show ip route", "show ip nat translations", "show ip interface brief", "show ip dhcp binding"], r: 3, e: "show ip dhcp binding affiche chaque adresse attribuée avec l’adresse MAC du PC. Les autres commandes montrent les routes, le NAT et l’état des interfaces." },
+    { q: "Quelle commande affiche les correspondances entre adresses privées et adresse publique ?", o: ["show ip dhcp binding", "show running-config", "show ip nat translations", "show vlan brief"], r: 2, e: "show ip nat translations liste les traductions en cours, par exemple 192.168.1.50 devenue 88.89.90.91." },
+    { q: "Pourquoi n’a-t-on configuré aucune route sur le routeur FAI ?", o: ["Ses deux réseaux sont directement connectés et il ne voit que 88.89.90.91", "Le routage dynamique est actif par défaut", "Le switch SW1 fait le routage à sa place", "Le serveur Web fait le routage à sa place"], r: 0, e: "Le FAI connaît 88.89.90.88/29 et 10.10.10.0/24 par ses interfaces. Grâce au NAT, il ne voit jamais les adresses 192.168.1.x." },
+    { q: "Quel est le port TCP par défaut du protocole HTTP ?", o: ["22", "53", "80", "443"], r: 2, e: "22 correspond à SSH, 53 au DNS et 443 à HTTPS." },
+    { q: "Quel est le rôle d’un serveur DNS ?", o: ["Traduire un nom de domaine en adresse IP", "Attribuer automatiquement des adresses IP", "Traduire les adresses privées en adresse publique", "Filtrer le trafic entrant"], r: 0, e: "Ici le DNS traduit www.monsite.com en 10.10.10.10. L’attribution d’adresses est le rôle du DHCP et la traduction privée/publique celui du NAT." },
+    { q: "Dans l’ordre, quelles sont les 4 étapes d’une attribution DHCP ?", o: ["Request, Offer, Discover, Acknowledge", "Offer, Discover, Acknowledge, Request", "Discover, Request, Offer, Acknowledge", "Discover, Offer, Request, Acknowledge"], r: 3, e: "C’est la séquence DORA : le client cherche un serveur (Discover), le serveur propose (Offer), le client demande (Request) et le serveur confirme (Acknowledge)." },
+    { q: "Laquelle de ces adresses est une adresse privée (RFC 1918) ?", o: ["172.32.1.1", "172.16.5.4", "192.169.1.1", "88.89.90.91"], r: 1, e: "Les adresses privées sont 10.0.0.0/8, 172.16.0.0 à 172.31.255.255 et 192.168.0.0/16. Les trois autres propositions sont publiques." },
+    { q: "À quelle couche du modèle OSI travaille un routeur ?", o: ["Couche 1 (physique)", "Couche 2 (liaison)", "Couche 3 (réseau)", "Couche 4 (transport)"], r: 2, e: "Un routeur décide du chemin d’après les adresses IP, qui sont de la couche 3. Un switch travaille en couche 2 avec les adresses MAC." },
+    { q: "Quelle est la différence entre TCP et UDP ?", o: ["UDP garantit la livraison, pas TCP", "TCP est plus rapide car il n’établit pas de connexion", "UDP est le protocole utilisé par HTTP", "TCP est orienté connexion, UDP ne l’est pas"], r: 3, e: "TCP établit une connexion et vérifie la livraison, ce qui convient à HTTP. UDP envoie sans connexion, plus léger mais sans garantie." },
+    { q: "Quelle est la taille d’une adresse MAC ?", o: ["32 bits", "48 bits", "64 bits", "128 bits"], r: 1, e: "Une adresse MAC fait 48 bits, soit 6 octets écrits en hexadécimal. 32 bits correspond à une adresse IPv4 et 128 bits à une adresse IPv6." },
+    { q: "Pourquoi préférer SSH à Telnet pour administrer un routeur ?", o: ["SSH chiffre les échanges alors que Telnet les envoie en clair", "SSH est plus rapide", "Telnet est interdit sur les routeurs Cisco", "SSH ne demande pas de mot de passe"], r: 0, e: "Avec Telnet, le mot de passe circule en clair sur le réseau. SSH chiffre toute la session." }
+  ]
+};
+/* =============================================================== */
+
+const L = ["A", "B", "C", "D"];
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function table(t) {
+  const w = el("div", "wrap"), tb = el("table"), th = el("thead"), tr = el("tr");
+  t.entetes.forEach(h => tr.append(el("th", "", h))); th.append(tr); tb.append(th);
+  const body = el("tbody");
+  t.lignes.forEach(r => { const row = el("tr"); r.forEach(c => row.append(el("td", "", c))); body.append(row); });
+  tb.append(body); w.append(tb); return w;
+}
+const PROMPT = /^([^\s>#]+(?:\([^)]*\))?[>#])(.*)$/;
+function code(titre, texte, h) {
+  const box = el("div", "code"); box.style.setProperty("--h", h);
+  const bar = el("div", "bar"); bar.append(el("span", "", titre));
+  const btn = el("button", "", "Copier les commandes"); btn.type = "button"; bar.append(btn);
+  const pre = el("pre"); const cmds = [];
+  texte.split("\n").forEach((ligne, i) => {
+    if (i) pre.append("\n");
+    if (ligne.trim().startsWith("!")) { pre.append(el("span", "c", ligne)); return; }
+    const m = ligne.match(PROMPT);
+    if (m) { pre.append(el("span", "p", m[1]), el("span", "m", m[2])); cmds.push(m[2]); }
+    else { pre.append(ligne); }
+  });
+  btn.onclick = async () => {
+    const t = cmds.join("\n");
+    try { await navigator.clipboard.writeText(t); btn.textContent = "Copié ✔"; }
+    catch (e) { const ta = el("textarea"); ta.value = t; document.body.append(ta); ta.select(); try { document.execCommand("copy"); btn.textContent = "Copié ✔"; } catch (e2) { btn.textContent = "Copie impossible"; } ta.remove(); }
+    setTimeout(() => btn.textContent = "Copier les commandes", 1800);
+  };
+  box.append(bar, pre); return box;
+}
+function P(id) { return document.getElementById(id); }
+function hue(id) { return P(id).dataset.h; }
+
+/* En-tête */
+document.title = TP.titre; P("titre").textContent = TP.titre; P("soustitre").textContent = TP.sousTitre;
+
+/* Énoncé */
+(function () {
+  const s = P("enonce"); s.append(el("h2", "", "Énoncé du TP"));
+  TP.enonce.forEach(t => s.append(el("p", "", t)));
+  s.append(el("h3", "", "Objectifs")); const ul = el("ul", "obj"); TP.objectifs.forEach(o => ul.append(el("li", "", o))); s.append(ul);
+  s.append(el("h3", "", "Matériel")); const um = el("ul", "obj"); TP.materiel.forEach(o => um.append(el("li", "", o))); s.append(um);
+})();
+
+/* Adressage */
+(function () {
+  const s = P("adressage"); s.append(el("h2", "", "Plan d’adressage"));
+  s.append(el("h3", "", "Réseaux")); s.append(table(TP.reseaux));
+  s.append(el("h3", "", "Adresses des appareils")); s.append(table(TP.adressage));
+  s.append(el("h3", "", "Table des liens (câblage)")); s.append(table(TP.liens));
+  if (TP.flux) { s.append(el("h3", "", "Politique de filtrage (matrice des flux)")); s.append(table(TP.flux)); }
+})();
+
+/* Configuration CLI */
+(function () {
+  const s = P("config"); s.append(el("h2", "", "Configuration CLI"));
+  s.append(el("div", "note", "Chaque commande est précédée de son prompt. Le bouton « Copier » ne copie que les commandes, sans les prompts."));
+  TP.configs.forEach(c => s.append(code(c.appareil, c.lignes, hue("config"))));
+  (TP.configNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+/* Vérifications */
+(function () {
+  const s = P("tests"); s.append(el("h2", "", "Vérifications et tests"));
+  TP.tests.forEach(t => s.append(code(t.titre, t.lignes, hue("tests"))));
+  (TP.testsNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+/* QCM */
+(function () {
+  const s = P("qcm"); s.append(el("h2", "", "QCM — " + TP.qcm.length + " questions"));
+  const cards = [];
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    q.o.forEach((o, j) => {
+      const lab = el("label"); const r = el("input"); r.type = "radio"; r.name = "q" + i; r.value = j;
+      lab.append(r, " " + L[j] + ". " + o); c.append(lab);
+    });
+    cards.push(c); s.append(c);
+  });
+  const btn = el("button", "btn", "Valider mes réponses"); btn.type = "button";
+  const sc = el("span"); sc.id = "score"; sc.setAttribute("aria-live", "polite");
+  btn.onclick = () => {
+    let ok = 0;
+    TP.qcm.forEach((q, i) => {
+      const ch = document.querySelector('input[name="q' + i + '"]:checked');
+      const good = ch && Number(ch.value) === q.r; if (good) ok++;
+      cards[i].classList.toggle("ok", !!good); cards[i].classList.toggle("ko", !good);
+    });
+    sc.textContent = "Score : " + ok + " / " + TP.qcm.length + " — explications dans l’onglet Corrigé";
+  };
+  s.append(btn, sc);
+})();
+
+/* Corrigé */
+(function () {
+  const s = P("corrige"); s.append(el("h2", "", "Corrigé du QCM"));
+  const g = el("p", "grille", TP.qcm.map((q, i) => (i + 1) + "-" + L[q.r]).join("  ·  ")); s.append(g);
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    c.append(el("div", "", "Réponse " + L[q.r] + " — " + q.o[q.r])); c.append(el("div", "note", q.e)); s.append(c);
+  });
+})();
+
+/* Onglets */
+const panels = Array.from(document.querySelectorAll("section.panel")), nav = P("tabs");
+panels.forEach((p, i) => {
+  p.style.setProperty("--h", p.dataset.h);
+  const b = el("button", "tab", p.dataset.label); b.type = "button"; b.setAttribute("role", "tab");
+  b.style.setProperty("--h", p.dataset.h); b.onclick = () => show(i); nav.append(b);
+});
+function show(i, noHash) {
+  panels.forEach((p, j) => { p.hidden = j !== i; nav.children[j].classList.toggle("on", j === i); nav.children[j].setAttribute("aria-selected", j === i ? "true" : "false"); });
+  if (!noHash) { try { history.replaceState(null, "", "#" + panels[i].id); } catch (e) {} }
+}
+function fromHash() { const k = panels.findIndex(p => "#" + p.id === location.hash); show(k < 0 ? 0 : k, true); }
+window.addEventListener("hashchange", fromHash); fromHash();
+</script>
+</body>
+</html>

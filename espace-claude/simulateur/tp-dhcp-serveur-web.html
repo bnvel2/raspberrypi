@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TP Packet Tracer : DHCP et serveur Web distant</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<style>
+:root{--bg:#f4f6f9;--fg:#1c2330;--mut:#5a6577;--card:#fff;--bd:#d3d9e2;--a:#0b6b57;--abg:#dff3ec;--p:#4a41b0;--pbg:#e9e7fb;--code:#111827;--codefg:#e5e7eb;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9ef;--mut:#9aa5b8;--card:#1a2029;--bd:#323b4a;--a:#5fd0ad;--abg:#0e3a30;--p:#b3aef2;--pbg:#2a2562;--code:#0a0d12;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9ef;--mut:#9aa5b8;--card:#1a2029;--bd:#323b4a;--a:#5fd0ad;--abg:#0e3a30;--p:#b3aef2;--pbg:#2a2562;--code:#0a0d12;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 "IBM Plex Sans",system-ui,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--card);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--card);border-bottom:1px solid var(--bd)}
+nav{max-width:960px;margin:auto;padding:8px 16px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.brand{font-weight:600;margin-right:12px;color:var(--a)}
+nav button{font:inherit;color:var(--fg);background:none;border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+nav button:hover{background:var(--bg)}
+nav button.on,.dd.on>.dbtn{background:var(--abg);color:var(--a);font-weight:500}
+.dd{position:relative}
+.menu{display:none;position:absolute;left:0;top:100%;min-width:230px;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.dd.open .menu{display:block}
+.menu button{display:block;width:100%;text-align:left}
+main{max-width:960px;margin:auto;padding:24px 16px 48px}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 8px}
+h2{font-size:1.3rem;margin:28px 0 8px}
+p{max-width:70ch}
+.mut{color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:20px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px}
+.card h3{margin:0 0 4px;font-size:1.05rem}
+.btn{font:inherit;background:var(--a);color:var(--bg);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn.alt{background:none;color:var(--a);border:1px solid var(--a)}
+table{display:block;overflow-x:auto;max-width:100%;border-collapse:collapse;margin:12px 0;font-size:.94rem}
+th,td{border:1px solid var(--bd);padding:6px 10px;text-align:left;white-space:nowrap}
+td:last-child:not(:only-child){white-space:normal}
+th{background:var(--card)}
+pre{background:var(--code);color:var(--codefg);padding:14px;border-radius:10px;overflow-x:auto;font:.88rem/1.5 "IBM Plex Mono",ui-monospace,monospace}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.9em}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--bd);margin-top:16px}
+.tabs button{font:inherit;color:var(--mut);background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--a);border-bottom-color:var(--a);font-weight:500}
+.panel{padding:12px 2px}
+details{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin:8px 0}
+summary{cursor:pointer;font-weight:500}
+fieldset{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin:12px 0;padding:12px 16px}
+legend{font-weight:600;padding:0 6px}
+label{display:block;padding:4px 0;cursor:pointer}
+.ok{border-color:var(--a)}.ko{border-color:#c2410c}
+.exp{margin:8px 0 0;color:var(--mut);font-size:.93rem}
+svg text{font-family:inherit}
+button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><nav id="nav">
+<button class="brand" data-go="accueil">TP DHCP et Web</button>
+<div class="dd"><button class="dbtn" aria-expanded="false">Sujet ▾</button><div class="menu">
+<button data-go="contexte">Contexte et objectifs</button><button data-go="adressage">Matériel et adressage</button><button data-go="travail">Travail demandé</button><button data-go="grille">Grille d’évaluation</button></div></div>
+<button data-go="schema">Schéma</button>
+<button data-go="qcm">QCM</button>
+<div class="dd"><button class="dbtn" aria-expanded="false">Corrigé ▾</button><div class="menu">
+<button data-go="c-config">Configurations</button><button data-go="c-rep">Réponses aux questions</button><button data-go="c-tests">Tests et échange DHCP</button><button data-go="c-pannes">Dépannage</button><button data-go="c-qcm">Réponses du QCM</button></div></div>
+</nav></header>
+<main>
+
+<section class="page" id="accueil">
+<h1>TP Packet Tracer : DHCP et serveur Web distant</h1>
+<p class="mut">Deux sites reliés par deux routeurs. Les postes du site A reçoivent leur adresse par DHCP puis consultent un serveur Web situé sur le site B. Durée prévue : 2 heures.</p>
+<div class="grid">
+<div class="card"><h3>Sujet</h3><p class="mut">Contexte, adressage et sept parties de travail.</p><button class="btn" data-go="travail">Ouvrir le sujet</button></div>
+<div class="card"><h3>Schéma</h3><p class="mut">La topologie en blocs.</p><button class="btn" data-go="schema">Voir le schéma</button></div>
+<div class="card"><h3>QCM</h3><p class="mut">Huit questions avec correction immédiate.</p><button class="btn" data-go="qcm">Passer le QCM</button></div>
+<div class="card"><h3>Corrigé</h3><p class="mut">Configurations, réponses et pannes types.</p><button class="btn alt" data-go="c-config">Ouvrir le corrigé</button></div>
+</div>
+</section>
+
+<section class="page" id="contexte" hidden>
+<h1>Contexte et objectifs</h1>
+<p>Une petite entreprise possède deux sites reliés par une liaison point à point entre deux routeurs. Sur le site A, un serveur DHCP distribue les adresses aux postes. Sur le site B se trouvent un serveur Web et un serveur DNS. Votre mission : construire la maquette, la configurer, puis prouver qu’elle fonctionne.</p>
+<h2>Objectifs</h2>
+<ul><li>Configurer un serveur DHCP (pool, passerelle, DNS).</li><li>Configurer deux routeurs et le routage statique entre deux réseaux.</li><li>Configurer un serveur Web et un serveur DNS.</li><li>Tester et diagnostiquer avec <code>ping</code>, <code>ipconfig</code> et le navigateur.</li><li>Observer un échange DHCP en mode Simulation.</li></ul>
+</section>
+
+<section class="page" id="adressage" hidden>
+<h1>Matériel et adressage</h1>
+<p>Matériel : 2 routeurs 2911 (ou 1941), 2 switchs 2960, 3 postes (PC0, PC1, Laptop), 3 serveurs (DHCP, Web, DNS). Câbles droits partout, câble croisé entre R1 et R2.</p>
+<table><tr><th>Équipement</th><th>Interface</th><th>Adresse IP</th><th>Masque</th><th>Passerelle</th></tr>
+<tr><td>R1</td><td>G0/0 (LAN A)</td><td>192.168.10.1</td><td>255.255.255.0</td><td>–</td></tr>
+<tr><td>R1</td><td>G0/1 (WAN)</td><td>10.0.0.1</td><td>255.255.255.252</td><td>–</td></tr>
+<tr><td>R2</td><td>G0/1 (WAN)</td><td>10.0.0.2</td><td>255.255.255.252</td><td>–</td></tr>
+<tr><td>R2</td><td>G0/0 (LAN B)</td><td>172.16.0.1</td><td>255.255.255.0</td><td>–</td></tr>
+<tr><td>Serveur DHCP</td><td>NIC</td><td>192.168.10.2</td><td>255.255.255.0</td><td>192.168.10.1</td></tr>
+<tr><td>Serveur Web</td><td>NIC</td><td>172.16.0.10</td><td>255.255.255.0</td><td>172.16.0.1</td></tr>
+<tr><td>Serveur DNS</td><td>NIC</td><td>172.16.0.11</td><td>255.255.255.0</td><td>172.16.0.1</td></tr>
+<tr><td>PC0, PC1, Laptop</td><td>NIC</td><td colspan="3">DHCP (adresse, masque, passerelle et DNS fournis)</td></tr></table>
+</section>
+
+<section class="page" id="travail" hidden>
+<h1>Travail demandé</h1>
+<div class="tabset">
+<div class="tabs" role="tablist">
+<button data-tab="ta" aria-selected="true">A Montage</button><button data-tab="tb">B Routeurs</button><button data-tab="tc">C Serveurs</button><button data-tab="td">D Clients</button><button data-tab="te">E Tests</button><button data-tab="tf">F Simulation</button><button data-tab="tg">G Dépannage</button></div>
+<div class="panel" id="ta"><p class="mut">20 minutes</p><ul><li>Placez et nommez : R1, R2, Switch0, Switch1, DHCP, WEB, DNS, PC0, PC1, Laptop.</li><li>Câblez selon le schéma et attendez que les liens passent au vert.</li><li><b>Question A1</b> : pourquoi utilise-t-on un câble croisé entre les deux routeurs ?</li></ul></div>
+<div class="panel" id="tb" hidden><p class="mut">25 minutes</p><ul><li>Nommez chaque routeur, configurez ses deux interfaces et activez-les.</li><li>Ajoutez la route statique vers le réseau de l’autre site, puis sauvegardez.</li><li>Depuis R1, testez <code>ping 10.0.0.2</code>.</li><li><b>Question B1</b> : écrivez la commande de route de R1 et de R2.</li><li><b>Question B2</b> : que signifie /30 ? Combien d’hôtes ?</li></ul></div>
+<div class="panel" id="tc" hidden><p class="mut">30 minutes</p><ul><li>Serveur DHCP : IP statique, puis service DHCP activé avec le pool par défaut <code>serverPool</code> (passerelle, DNS, début en .10, masque, 50 utilisateurs). Validez avec Save.</li><li>Serveur Web : IP statique, HTTP activé, page <code>index.html</code> personnalisée avec votre nom.</li><li>Serveur DNS : IP statique, DNS activé, enregistrement A <code>www.monsite.local</code> vers le serveur Web.</li><li><b>Question C1</b> : pourquoi les serveurs ont-ils une adresse statique ?</li></ul></div>
+<div class="panel" id="td" hidden><p class="mut">10 minutes</p><ul><li>Sur chaque poste : Desktop, IP Configuration, DHCP.</li><li>Relevez adresse, masque, passerelle et DNS de PC0, PC1 et Laptop.</li><li><b>Question D1</b> : les trois adresses sont-elles identiques ? Pourquoi ?</li></ul></div>
+<div class="panel" id="te" hidden><p class="mut">20 minutes</p><ul><li>Depuis PC0 : ping de la passerelle, de 10.0.0.2, puis du serveur Web.</li><li>Navigateur : <code>http://172.16.0.10</code> puis <code>http://www.monsite.local</code>.</li><li>Sur R1 : <code>show ip route</code> et <code>show ip interface brief</code>. Recopiez la ligne de la route vers le LAN B.</li><li>Faites valider la maquette par l’enseignant.</li></ul></div>
+<div class="panel" id="tf" hidden><p class="mut">15 minutes</p><ul><li>Mode Simulation, filtres DHCP puis HTTP (et DNS).</li><li>Faites redemander son adresse à un poste (Static puis DHCP).</li><li>Complétez le tableau des quatre messages DHCP : nom, IP source, IP destination.</li><li><b>Question F1</b> : pourquoi le premier message est-il envoyé en diffusion ?</li></ul></div>
+<div class="panel" id="tg" hidden><p class="mut">10 minutes</p><ul><li>L’enseignant introduit une panne dans votre maquette.</li><li>Décrivez : symptôme observé, tests effectués, cause trouvée, correction apportée.</li></ul><h2>Questions de synthèse</h2><ol><li>Que se passe-t-il si on supprime la route statique sur R2 ?</li><li>Comment un routeur choisit-il où envoyer un paquet destiné à 172.16.0.10 ?</li><li>Pourquoi la plage DHCP commence-t-elle à 192.168.10.10 ?</li><li>Quel est l’intérêt du DNS ?</li></ol></div>
+</div></div>
+</section>
+
+<section class="page" id="grille" hidden>
+<h1>Grille d’évaluation</h1>
+<table><tr><th>Compétence</th><th>Critère</th><th>Points</th></tr>
+<tr><td>Montage</td><td>Équipements corrects, nommés et câblés</td><td>2</td></tr>
+<tr><td>Routeurs</td><td>Interfaces configurées et actives</td><td>2</td></tr>
+<tr><td>Routeurs</td><td>Routes statiques correctes</td><td>2</td></tr>
+<tr><td>Serveur DHCP</td><td>Adresse statique et pool correct et validé</td><td>3</td></tr>
+<tr><td>Web et DNS</td><td>Services actifs, page personnalisée, enregistrement DNS</td><td>2</td></tr>
+<tr><td>Clients</td><td>Adresses obtenues en DHCP</td><td>1</td></tr>
+<tr><td>Validation</td><td>Ping et accès Web réussis (IP et nom)</td><td>3</td></tr>
+<tr><td>Observation</td><td>Tableau des messages DHCP et question F1</td><td>2</td></tr>
+<tr><td>Questions</td><td>Réponses justes et argumentées</td><td>2</td></tr>
+<tr><td>Dépannage</td><td>Démarche méthodique</td><td>1</td></tr>
+<tr><th>Total</th><th></th><th>20</th></tr></table>
+<p class="mut">Bonus jusqu’à +2 : relais DHCP (<code>ip helper-address</code>) ou DHCP configuré sur le routeur.</p>
+</section>
+
+<section class="page" id="schema" hidden>
+<h1>Schéma de la maquette</h1>
+<svg width="100%" viewBox="0 0 680 320" role="img" aria-label="LAN A avec trois postes, un switch et un serveur DHCP, relié par R1 et R2 au LAN B avec un switch, un serveur Web et un serveur DNS">
+<style>.la{fill:var(--abg);stroke:var(--a)}.lb{fill:var(--pbg);stroke:var(--p)}.d{fill:var(--card);stroke:var(--bd)}.r{fill:var(--bd);stroke:var(--mut)}.t{font-size:14px;font-weight:500;fill:var(--fg)}.s{font-size:12px;fill:var(--mut)}.l{stroke:var(--mut);stroke-width:1.5}.m{text-anchor:middle;dominant-baseline:central}.h{dominant-baseline:central}</style>
+<rect class="la" x="20" y="30" width="194" height="266" rx="16"/><text class="t h" x="36" y="54">LAN A</text><text class="s h" x="36" y="72">192.168.10.0/24</text>
+<rect class="lb" x="466" y="30" width="194" height="200" rx="16"/><text class="t h" x="482" y="54">LAN B</text><text class="s h" x="482" y="72">172.16.0.0/24</text>
+<path class="l" d="M98 107L122 153M98 153H122M98 199L122 153M160 170V232M198 153H240M310 153H370M440 153H482M558 153L582 127M558 153L582 179"/>
+<g class="d"><rect x="32" y="90" width="66" height="34" rx="6"/><rect x="32" y="136" width="66" height="34" rx="6"/><rect x="32" y="182" width="66" height="34" rx="6"/><rect x="34" y="232" width="160" height="48" rx="6"/><rect x="582" y="110" width="66" height="34" rx="6"/><rect x="582" y="162" width="66" height="34" rx="6"/></g>
+<g class="r"><rect x="122" y="136" width="76" height="34" rx="6"/><rect x="240" y="136" width="70" height="34" rx="6"/><rect x="370" y="136" width="70" height="34" rx="6"/><rect x="482" y="136" width="76" height="34" rx="6"/></g>
+<g class="t m"><text x="65" y="107">PC0</text><text x="65" y="153">PC1</text><text x="65" y="199">Laptop</text><text x="160" y="153">Switch0</text><text x="275" y="153">R1</text><text x="405" y="153">R2</text><text x="520" y="153">Switch1</text><text x="615" y="127">Web</text><text x="615" y="179">DNS</text><text x="114" y="248">Serveur DHCP</text></g>
+<g class="s m"><text x="114" y="266">192.168.10.2 statique</text><text x="340" y="190">Liaison WAN</text><text x="340" y="208">10.0.0.0/30</text></g>
+</svg>
+<table><tr><th>Équipement</th><th>LAN / WAN</th><th>Adresse</th></tr>
+<tr><td>R1</td><td>G0/0 côté LAN A, G0/1 côté WAN</td><td>192.168.10.1 et 10.0.0.1</td></tr>
+<tr><td>R2</td><td>G0/1 côté WAN, G0/0 côté LAN B</td><td>10.0.0.2 et 172.16.0.1</td></tr>
+<tr><td>Serveur Web, serveur DNS</td><td>LAN B</td><td>172.16.0.10 et 172.16.0.11</td></tr></table>
+</section>
+
+<section class="page" id="qcm" hidden>
+<h1>QCM</h1>
+<p class="mut">Huit questions, une seule bonne réponse chacune. La correction détaille chaque réponse.</p>
+<div id="quiz"></div>
+<button class="btn" id="check">Corriger</button> <button class="btn alt" id="reset">Recommencer</button>
+<p id="score" role="status"></p>
+</section>
+
+<section class="page" id="c-config" hidden>
+<h1>Corrigé : configurations</h1>
+<div class="tabset">
+<div class="tabs" role="tablist"><button data-tab="k1" aria-selected="true">R1</button><button data-tab="k2">R2</button><button data-tab="k3">Serveur DHCP</button><button data-tab="k4">Web et DNS</button></div>
+<div class="panel" id="k1"><pre>enable
+configure terminal
+hostname R1
+interface g0/0
+ ip address 192.168.10.1 255.255.255.0
+ no shutdown
+interface g0/1
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+exit
+ip route 172.16.0.0 255.255.255.0 10.0.0.2
+end
+write memory</pre></div>
+<div class="panel" id="k2" hidden><pre>enable
+configure terminal
+hostname R2
+interface g0/0
+ ip address 172.16.0.1 255.255.255.0
+ no shutdown
+interface g0/1
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+exit
+ip route 192.168.10.0 255.255.255.0 10.0.0.1
+end
+write memory</pre></div>
+<div class="panel" id="k3" hidden><table><tr><th>Paramètre</th><th>Valeur</th></tr><tr><td>Pool Name</td><td>serverPool (pool par défaut, non renommable)</td></tr><tr><td>Default Gateway</td><td>192.168.10.1</td></tr><tr><td>DNS Server</td><td>172.16.0.11</td></tr><tr><td>Start IP Address</td><td>192.168.10.10</td></tr><tr><td>Subnet Mask</td><td>255.255.255.0</td></tr><tr><td>Maximum Number of Users</td><td>50</td></tr></table><p>Service DHCP sur On, puis Save. Un pool non validé n’est pas pris en compte : c’est l’erreur la plus fréquente. Modifier le pool <code>serverPool</code> existant plutôt que d’en créer un second.</p></div>
+<div class="panel" id="k4" hidden><ul><li>Serveur Web : Services, HTTP sur On, <code>index.html</code> personnalisé, Save.</li><li>Serveur DNS : Services, DNS sur On, enregistrement de type A : <code>www.monsite.local</code> vers <code>172.16.0.10</code>, puis Add.</li></ul></div>
+</div>
+</section>
+
+<section class="page" id="c-rep" hidden>
+<h1>Corrigé : réponses aux questions</h1>
+<details open><summary>A1 : câble croisé entre les routeurs</summary><p>On relie deux équipements de même nature : l’émission de l’un doit arriver sur la réception de l’autre. Les liens entre équipements de nature différente (poste, switch, routeur) sont droits.</p></details>
+<details><summary>B1 : routes statiques</summary><p>R1 : <code>ip route 172.16.0.0 255.255.255.0 10.0.0.2</code><br>R2 : <code>ip route 192.168.10.0 255.255.255.0 10.0.0.1</code></p></details>
+<details><summary>B2 : masque /30</summary><p>Deux bits pour la partie hôte : 4 adresses, dont l’adresse réseau et la diffusion, soit 2 hôtes utilisables. C’est exactement ce qu’il faut pour une liaison entre deux routeurs.</p></details>
+<details><summary>C1 : adresses statiques des serveurs</summary><p>Un serveur doit être joignable à une adresse fixe et connue (clients, DNS, pool DHCP). Le serveur DHCP ne peut pas non plus obtenir son adresse de lui-même.</p></details>
+<details><summary>D1 : adresses des clients</summary><p>Non : chaque client reçoit une adresse libre différente du pool. Masque, passerelle et DNS sont identiques car communs au pool. Une adresse en 169.254.x.x signale qu’aucune offre DHCP n’a été reçue.</p></details>
+<details><summary>F1 : diffusion du premier message</summary><p>Au moment du Discover, le client n’a pas d’adresse IP et ne connaît pas le serveur DHCP : il diffuse sa demande sur le réseau local. Cette diffusion ne franchit pas le routeur, d’où le serveur placé dans le même LAN (ou un relais DHCP).</p></details>
+<details><summary>Synthèse 1 : route supprimée sur R2</summary><p>Le paquet aller atteint le serveur, mais R2 ne sait pas renvoyer la réponse vers 192.168.10.0/24 : le ping échoue. Le routage doit exister dans les deux sens.</p></details>
+<details><summary>Synthèse 2 : choix du routeur</summary><p>Il compare l’adresse de destination aux réseaux de sa table, retient la route la plus spécifique (plus long préfixe) et envoie le paquet au prochain saut 10.0.0.2 par G0/1.</p></details>
+<details><summary>Synthèse 3 : plage commençant à .10</summary><p>Les adresses .1 à .9 sont réservées aux équipements fixes (routeur en .1, serveur DHCP en .2) pour éviter tout conflit avec une adresse distribuée.</p></details>
+<details><summary>Synthèse 4 : intérêt du DNS</summary><p>On retient un nom plutôt qu’une adresse, et un changement d’adresse du serveur ne demande de modifier que l’enregistrement DNS.</p></details>
+</section>
+
+<section class="page" id="c-tests" hidden>
+<h1>Corrigé : tests et échange DHCP</h1>
+<table><tr><th>Test depuis PC0</th><th>Résultat attendu</th></tr>
+<tr><td>ping 192.168.10.1</td><td>Réussi</td></tr><tr><td>ping 10.0.0.2</td><td>Réussi</td></tr>
+<tr><td>ping 172.16.0.10</td><td>Réussi (le premier paquet peut échouer à cause de l’ARP)</td></tr>
+<tr><td>http://172.16.0.10</td><td>Page personnalisée affichée</td></tr>
+<tr><td>http://www.monsite.local</td><td>Page personnalisée affichée</td></tr></table>
+<p>Ligne attendue dans <code>show ip route</code> sur R1 :</p>
+<pre>S    172.16.0.0/24 [1/0] via 10.0.0.2</pre>
+<h2>Les quatre messages DHCP</h2>
+<table><tr><th>Étape</th><th>Message</th><th>IP source</th><th>IP destination</th></tr>
+<tr><td>1</td><td>DHCP Discover</td><td>0.0.0.0</td><td>255.255.255.255</td></tr>
+<tr><td>2</td><td>DHCP Offer</td><td>192.168.10.2</td><td>255.255.255.255 ou adresse proposée</td></tr>
+<tr><td>3</td><td>DHCP Request</td><td>0.0.0.0</td><td>255.255.255.255</td></tr>
+<tr><td>4</td><td>DHCP Acknowledge</td><td>192.168.10.2</td><td>255.255.255.255 ou adresse attribuée</td></tr></table>
+<p class="mut">Les destinations d’Offer et d’Acknowledge varient selon la version de Packet Tracer : accepter les deux réponses si l’élève justifie son observation.</p>
+</section>
+
+<section class="page" id="c-pannes" hidden>
+<h1>Corrigé : dépannage</h1>
+<table><tr><th>Panne introduite</th><th>Symptôme</th><th>Diagnostic et correction</th></tr>
+<tr><td>Mauvaise passerelle dans le pool DHCP</td><td>IP reçue, mais serveur Web injoignable</td><td><code>ipconfig</code> : corriger le pool, renouveler le bail</td></tr>
+<tr><td>Route supprimée sur R2</td><td>Ping vers le Web : Request timed out</td><td><code>show ip route</code> sur R2 : rétablir la route</td></tr>
+<tr><td>shutdown sur R1 G0/1</td><td>Aucun accès au réseau distant</td><td><code>show ip interface brief</code> : no shutdown</td></tr>
+<tr><td>HTTP sur Off</td><td>Ping réussi, navigateur en échec</td><td>Activer HTTP sur le serveur Web</td></tr>
+<tr><td>DHCP sur Off</td><td>Clients en 169.254.x.x</td><td>Activer DHCP sur le serveur</td></tr>
+<tr><td>Mauvais masque sur le lien WAN</td><td>Ping du lien WAN en échec</td><td>Corriger le masque (255.255.255.252)</td></tr></table>
+<p>Démarche attendue, de proche en proche : le poste (<code>ipconfig</code>), la passerelle, le routeur voisin, le réseau distant, puis le service (HTTP, DNS).</p>
+</section>
+
+<section class="page" id="c-qcm" hidden>
+<h1>Corrigé : réponses du QCM</h1>
+<div id="qcm-ans"></div>
+</section>
+
+</main>
+<script>
+const Q=[
+{q:"Quel message DHCP le client envoie-t-il en premier ?",o:["DHCP Offer","DHCP Discover","DHCP Request","DHCP Acknowledge"],a:1,e:"Le client commence par un Discover pour chercher un serveur DHCP."},
+{q:"Pourquoi le premier message DHCP est-il envoyé en diffusion ?",o:["Pour économiser de la bande passante","Parce que le routeur l’exige","Parce que le client n’a pas d’adresse IP et ne connaît pas le serveur","Parce que DHCP n’utilise jamais l’unicast"],a:2,e:"Sans adresse ni destinataire connu, le client diffuse sa demande sur le réseau local."},
+{q:"Combien d’hôtes utilisables offre un réseau en /30 ?",o:["4","6","30","2"],a:3,e:"4 adresses au total, moins l’adresse réseau et la diffusion : 2 hôtes."},
+{q:"Quelle commande permet à R1 d’atteindre le LAN 172.16.0.0/24 ?",o:["ip route 172.16.0.0 255.255.255.0 10.0.0.2","ip route 192.168.10.0 255.255.255.0 10.0.0.1","ip address 172.16.0.0 255.255.255.0","ip route 172.16.0.0 255.255.255.0 10.0.0.1"],a:0,e:"Réseau de destination, son masque, puis le prochain saut : l’adresse de R2 côté WAN."},
+{q:"Un poste affiche 169.254.12.7. Que signifie cette adresse ?",o:["Il a reçu une adresse du serveur DHCP","Il n’a reçu aucune réponse DHCP et s’est attribué une adresse","C’est l’adresse de la passerelle","Le serveur Web est injoignable"],a:1,e:"C’est l’adressage automatique (APIPA) : aucune offre DHCP n’est arrivée."},
+{q:"On supprime la route statique sur R2. Que devient le ping PC vers serveur Web ?",o:["Il réussit normalement","Il échoue car le paquet n’atteint pas le serveur","Il échoue car la réponse ne peut pas revenir vers le LAN A","Il réussit mais plus lentement"],a:2,e:"L’aller arrive, mais R2 ne sait plus renvoyer la réponse vers 192.168.10.0/24."},
+{q:"Pourquoi la plage DHCP commence-t-elle à 192.168.10.10 ?",o:["Pour réserver .1 à .9 aux équipements à adresse fixe","Parce que .1 à .9 sont interdites","Pour limiter le réseau à 10 postes","Parce que le serveur DHCP est en .10"],a:0,e:"On évite les conflits entre adresses distribuées et adresses statiques (routeur, serveurs)."},
+{q:"Quel est le rôle du serveur DNS dans ce TP ?",o:["Distribuer les adresses IP","Router les paquets entre les LAN","Traduire www.monsite.local en adresse IP","Héberger la page Web"],a:2,e:"Il fait correspondre un nom à l’adresse 172.16.0.10 du serveur Web."}];
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+function closeMenus(){$$('.dd').forEach(d=>{d.classList.remove('open');$('.dbtn',d).setAttribute('aria-expanded','false')})}
+function go(id){
+  if(!$('#'+id))id='accueil';
+  $$('.page').forEach(p=>p.hidden=p.id!==id);
+  $$('[data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===id&&!b.classList.contains('btn')&&!b.classList.contains('brand')));
+  $$('.dd').forEach(d=>d.classList.toggle('on',!!$('[data-go].on',d)));
+  closeMenus();window.scrollTo(0,0);
+  try{history.replaceState(null,'','#'+id)}catch(e){}
+}
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');
+  if(g){go(g.dataset.go);return}
+  const b=e.target.closest('.dbtn');
+  if(b){const d=b.parentElement,o=d.classList.contains('open');closeMenus();if(!o){d.classList.add('open');b.setAttribute('aria-expanded','true')}return}
+  const t=e.target.closest('[data-tab]');
+  if(t){const set=t.closest('.tabset');
+    $$('[data-tab]',set).forEach(x=>x.setAttribute('aria-selected',x===t));
+    $$('.panel',set).forEach(p=>p.hidden=p.id!==t.dataset.tab);return}
+  if(!e.target.closest('.dd'))closeMenus();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenus()});
+function renderQuiz(){
+  $('#quiz').innerHTML=Q.map((x,i)=>'<fieldset id="q'+i+'"><legend>Question '+(i+1)+'</legend><p>'+x.q+'</p>'+
+    x.o.map((o,j)=>'<label><input type="radio" name="r'+i+'" value="'+j+'"> '+o+'</label>').join('')+'<p class="exp" hidden>'+x.e+'</p></fieldset>').join('');
+  $('#score').textContent='';
+}
+$('#check').onclick=()=>{
+  let s=0;
+  Q.forEach((x,i)=>{
+    const f=$('#q'+i),c=$('input:checked',f);
+    const good=c&&+c.value===x.a;
+    if(good)s++;
+    f.classList.toggle('ok',!!good);f.classList.toggle('ko',!good);
+    $('.exp',f).hidden=false;
+    $('.exp',f).textContent=(good?'Bonne réponse. ':'Réponse attendue : '+x.o[x.a]+'. ')+x.e;
+  });
+  $('#score').textContent='Score : '+s+' / '+Q.length;
+};
+$('#reset').onclick=renderQuiz;
+$('#qcm-ans').innerHTML=Q.map((x,i)=>'<details><summary>'+(i+1)+'. '+x.q+'</summary><p><b>'+x.o[x.a]+'</b></p><p class="mut">'+x.e+'</p></details>').join('');
+renderQuiz();
+let h='accueil';try{h=location.hash.slice(1)||'accueil'}catch(e){}
+go(h);
+</script>
+</body>
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TP dépannage — VLAN et router-on-a-stick (5 pannes)</title>
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--txt:#1b2333;--mut:#5a6479;--bd:#d9dfeb;
+  --code:#0f1722;--codetxt:#d7e0ee;--prompt:#ffd166;--cmd:#8ee6a8;--cmt:#7f8da6;
+  --l:40%;--tint:95%;--ok:#1e8e4e;--ko:#c0392b;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+}
+:root[data-theme="dark"]{--bg:#0f131b;--card:#171c28;--txt:#e7ebf3;--mut:#9ba6bb;--bd:#2a3347;--l:64%;--tint:17%;--ok:#4cd388;--ko:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header.top{padding:22px 20px 8px;max-width:1100px;margin:0 auto}
+header.top h1{margin:0 0 4px;font-size:1.6rem}
+header.top p{margin:0;color:var(--mut)}
+#tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:1100px;margin:14px auto 0;padding:0 20px}
+.tab{--c:hsl(var(--h) 65% var(--l));border:2px solid var(--c);background:transparent;color:var(--c);font:inherit;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer}
+.tab.on{background:var(--c);color:#fff}
+.tab:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+main{max-width:1100px;margin:14px auto 40px;padding:0 20px}
+section.panel{--c:hsl(var(--h) 65% var(--l));background:var(--card);border:1px solid var(--bd);border-top:6px solid var(--c);border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+section.panel[hidden]{display:none}
+section.panel h2{margin:0 0 12px;color:var(--c)}
+section.panel h3{margin:18px 0 8px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{border:1px solid var(--bd);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:hsl(var(--h) 60% var(--tint));color:var(--txt)}
+ul.obj{padding-left:20px}
+.code{border-radius:10px;overflow:hidden;margin:12px 0;background:var(--code)}
+.code .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:hsl(var(--h) 55% 30%);color:#fff;font-weight:600}
+.code .bar button{font:inherit;font-size:.85rem;border:0;border-radius:6px;padding:4px 10px;cursor:pointer;background:#ffffff26;color:#fff}
+.code pre{margin:0;padding:12px 14px;overflow-x:auto;color:var(--codetxt);font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.code .p{color:var(--prompt)}.code .m{color:var(--cmd)}.code .c{color:var(--cmt);font-style:italic}
+.note{border-left:4px solid var(--c);background:hsl(var(--h) 60% var(--tint));padding:8px 12px;border-radius:6px;margin:10px 0}
+/* schéma */
+.schema{overflow-x:auto}
+.schema svg{width:100%;min-width:720px;height:auto;display:block}
+.schema text{fill:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.schema .nm{font-weight:700;font-size:15px;fill:#fff}
+.schema .if{font-size:12px;font-weight:600}
+.schema .ip{font-size:12px;fill:var(--mut)}
+.schema .lk{stroke:var(--mut);stroke-width:2.5;fill:none}
+.schema .tr{stroke:#e74c3c;stroke-width:5;stroke-dasharray:10 6;fill:none}
+.schema .ifbg{fill:var(--card);stroke:var(--bd)}
+/* qcm */
+.q{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:12px 0}
+.q.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.q.ko{border-color:var(--ko);background:color-mix(in srgb,var(--ko) 12%,transparent)}
+.q p{margin:0 0 8px;font-weight:600}
+.q label{display:block;padding:4px 6px;border-radius:6px;cursor:pointer}
+.q label:hover{background:hsl(var(--h) 60% var(--tint))}
+.btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:10px 18px;background:var(--c);color:#fff;cursor:pointer}
+#score{font-weight:700;margin-left:12px}
+.grille{font-family:ui-monospace,Menlo,Consolas,monospace;word-spacing:6px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 id="titre"></h1>
+  <p id="soustitre"></p>
+</header>
+<nav id="tabs" role="tablist" aria-label="Sections du TP"></nav>
+<main>
+  <section class="panel" id="enonce"   data-label="📘 Énoncé"          data-h="215"></section>
+
+  <!-- ===== SCHÉMA : remplacer le SVG d’exemple par la topologie du TP ===== -->
+  <section class="panel" id="schema"   data-label="🗺️ Schéma"          data-h="28">
+    <h2>Schéma de la topologie</h2>
+    <div class="schema">
+<svg viewBox="0 0 900 520" role="img" aria-label="Topologie du TP : R1 relié en trunk à SW1, SW1 relié en trunk à SW2, deux PC par switch">
+  <!-- Liens -->
+  <path class="tr" d="M420 110 L230 215"/>          <!-- R1 Gi0/0 → SW1 Fa0/1 : trunk -->
+  <path class="tr" d="M290 245 L610 245"/>          <!-- SW1 Gi0/1 → SW2 Gi0/1 : trunk -->
+  <path class="lk" d="M150 275 L110 390"/>          <!-- SW1 Fa0/2 → PC1 -->
+  <path class="lk" d="M250 275 L290 390"/>          <!-- SW1 Fa0/3 → PC2 -->
+  <path class="lk" d="M650 275 L610 390"/>          <!-- SW2 Fa0/2 → PC3 -->
+  <path class="lk" d="M750 275 L790 390"/>          <!-- SW2 Fa0/3 → PC4 -->
+
+  <!-- R1 -->
+  <rect x="350" y="20" width="200" height="90" rx="14" fill="#f28c28"/>
+  <text class="nm" x="450" y="50" text-anchor="middle">R1 — Cisco 2911</text>
+  <text class="nm" x="450" y="72" text-anchor="middle" style="font-size:12px;font-weight:500">Gi0/0.10 : 192.168.10.1 /24</text>
+  <text class="nm" x="450" y="90" text-anchor="middle" style="font-size:12px;font-weight:500">Gi0/0.20 : 192.168.20.1 /24</text>
+  <text class="ip" x="570" y="60">Serveur DHCP :</text>
+  <text class="ip" x="570" y="76">pools COMPTA et RH</text>
+
+  <!-- Switchs -->
+  <rect x="110" y="215" width="180" height="60" rx="14" fill="#2f80ed"/>
+  <text class="nm" x="200" y="243" text-anchor="middle">SW1</text>
+  <text class="nm" x="200" y="262" text-anchor="middle" style="font-size:12px;font-weight:500">Cisco 2960</text>
+  <rect x="610" y="215" width="180" height="60" rx="14" fill="#2f80ed"/>
+  <text class="nm" x="700" y="243" text-anchor="middle">SW2</text>
+  <text class="nm" x="700" y="262" text-anchor="middle" style="font-size:12px;font-weight:500">Cisco 2960</text>
+
+  <!-- PC -->
+  <rect x="40"  y="390" width="140" height="56" rx="12" fill="#27ae60"/><text class="nm" x="110" y="416" text-anchor="middle">PC1</text><text class="nm" x="110" y="435" text-anchor="middle" style="font-size:11px;font-weight:500">Compta · VLAN 10</text>
+  <rect x="220" y="390" width="140" height="56" rx="12" fill="#9b59b6"/><text class="nm" x="290" y="416" text-anchor="middle">PC2</text><text class="nm" x="290" y="435" text-anchor="middle" style="font-size:11px;font-weight:500">RH · VLAN 20</text>
+  <rect x="540" y="390" width="140" height="56" rx="12" fill="#27ae60"/><text class="nm" x="610" y="416" text-anchor="middle">PC3</text><text class="nm" x="610" y="435" text-anchor="middle" style="font-size:11px;font-weight:500">Compta · VLAN 10</text>
+  <rect x="720" y="390" width="140" height="56" rx="12" fill="#9b59b6"/><text class="nm" x="790" y="416" text-anchor="middle">PC4</text><text class="nm" x="790" y="435" text-anchor="middle" style="font-size:11px;font-weight:500">RH · VLAN 20</text>
+
+  <!-- Adresses -->
+  <text class="ip" x="110" y="464" text-anchor="middle">DHCP · 192.168.10.x</text>
+  <text class="ip" x="290" y="464" text-anchor="middle">DHCP · 192.168.20.x</text>
+  <text class="ip" x="610" y="464" text-anchor="middle">DHCP · 192.168.10.x</text>
+  <text class="ip" x="790" y="464" text-anchor="middle">Fixe · 192.168.20.10</text>
+
+  <!-- Étiquettes d’interfaces -->
+  <g class="if">
+    <rect class="ifbg" x="380" y="114" width="44" height="20" rx="5"/><text x="402" y="129" text-anchor="middle">Gi0/0</text>
+    <rect class="ifbg" x="206" y="190" width="44" height="20" rx="5"/><text x="228" y="205" text-anchor="middle">Fa0/1</text>
+    <rect class="ifbg" x="292" y="226" width="44" height="20" rx="5"/><text x="314" y="241" text-anchor="middle">Gi0/1</text>
+    <rect class="ifbg" x="564" y="226" width="44" height="20" rx="5"/><text x="586" y="241" text-anchor="middle">Gi0/1</text>
+    <rect class="ifbg" x="118" y="278" width="44" height="20" rx="5"/><text x="140" y="293" text-anchor="middle">Fa0/2</text>
+    <rect class="ifbg" x="236" y="278" width="44" height="20" rx="5"/><text x="258" y="293" text-anchor="middle">Fa0/3</text>
+    <rect class="ifbg" x="618" y="278" width="44" height="20" rx="5"/><text x="640" y="293" text-anchor="middle">Fa0/2</text>
+    <rect class="ifbg" x="736" y="278" width="44" height="20" rx="5"/><text x="758" y="293" text-anchor="middle">Fa0/3</text>
+    <rect class="ifbg" x="76"  y="362" width="52" height="20" rx="5"/><text x="102" y="377" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="262" y="362" width="52" height="20" rx="5"/><text x="288" y="377" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="580" y="362" width="52" height="20" rx="5"/><text x="606" y="377" text-anchor="middle">Fa0</text>
+    <rect class="ifbg" x="762" y="362" width="52" height="20" rx="5"/><text x="788" y="377" text-anchor="middle">Fa0</text>
+  </g>
+  <text class="ip" x="450" y="236" text-anchor="middle">Trunk 802.1Q (VLAN 10, 20)</text>
+  <text class="ip" x="250" y="160" text-anchor="end">Trunk 802.1Q</text>
+
+  <!-- Légende -->
+  <g font-size="12">
+    <rect x="40" y="494" width="14" height="14" rx="3" fill="#f28c28"/><text x="60" y="506">Routeur</text>
+    <rect x="130" y="494" width="14" height="14" rx="3" fill="#2f80ed"/><text x="150" y="506">Switch</text>
+    <rect x="215" y="494" width="14" height="14" rx="3" fill="#27ae60"/><text x="235" y="506">VLAN 10 Compta</text>
+    <rect x="345" y="494" width="14" height="14" rx="3" fill="#9b59b6"/><text x="365" y="506">VLAN 20 RH</text>
+    <line x1="455" y1="501" x2="495" y2="501" stroke="#e74c3c" stroke-width="5" stroke-dasharray="8 4"/><text x="503" y="506">Trunk 802.1Q</text>
+    <line x1="600" y1="501" x2="640" y2="501" stroke="#7f8da6" stroke-width="2.5"/><text x="648" y="506">Lien d’accès (câble droit)</text>
+  </g>
+</svg>
+    </div>
+  </section>
+
+  <section class="panel" id="adressage" data-label="🔢 Adressage"       data-h="160"></section>
+  <section class="panel" id="config"    data-label="⌨️ Config CLI"       data-h="270"></section>
+  <section class="panel" id="tests"     data-label="✅ Vérifications"    data-h="340"></section>
+  <section class="panel" id="depannage" data-label="🛠️ Dépannage (corrigé)" data-h="190"></section>
+  <section class="panel" id="qcm"       data-label="📝 QCM"              data-h="45"></section>
+  <section class="panel" id="corrige"   data-label="🔑 Corrigé"          data-h="0"></section>
+</main>
+
+<script>
+/* ===================== DONNÉES À REMPLACER ===================== */
+const TP = {
+  titre: "TP dépannage — VLAN et router-on-a-stick (5 pannes)",
+  sousTitre: "Cisco Packet Tracer · niveau bac pro CIEL · ticket d’incident, diagnostic, corrigé CLI",
+  enonce: [
+    "L’entreprise DATANORD a deux services : la Comptabilité (VLAN 10) et les Ressources humaines (VLAN 20). Les postes sont répartis sur deux switchs SW1 et SW2. Le routeur R1 assure le routage inter-VLAN en router-on-a-stick et distribue les adresses IP par DHCP. Le poste PC4 du responsable RH a une adresse fixe.",
+    "Vendredi soir, un stagiaire a « optimisé » la configuration du réseau. Lundi matin, le service informatique reçoit le ticket ci-dessous. Vous êtes le technicien d’astreinte : vous devez retrouver les pannes, les corriger, vérifier, puis documenter votre intervention."
+  ],
+  objectifs: [
+    "Lire un ticket d’incident et reformuler les symptômes",
+    "Appliquer une méthode de dépannage du bas vers le haut (câblage, VLAN, trunk, routeur, DHCP, poste)",
+    "Utiliser les commandes de diagnostic : show vlan brief, show interfaces trunk, show interfaces, show ip dhcp binding, ipconfig, ping",
+    "Corriger chaque panne en CLI et vérifier après chaque correction",
+    "Compléter le tableau symptôme / cause / solution"
+  ],
+  materiel: ["1 routeur Cisco 2911 (R1)", "2 switchs Cisco 2960-24TT (SW1, SW2)", "4 PC-PT (PC1 à PC4)", "Le fichier Packet Tracer de départ préparé par le professeur (configurations de l’onglet « Config CLI »)"],
+  ticket: {
+    entetes: ["Poste", "Utilisateur / service", "Ce que dit l’utilisateur"],
+    lignes: [
+      ["PC1", "Mme Leroy — Compta (SW1)", "« Mon PC affiche une adresse en 192.168.20.x. Ce n’est pas notre réseau, on est en 192.168.10.0 à la compta ! »"],
+      ["PC2", "M. Diallo — RH (SW1)", "« Ma passerelle répond au ping, mais je ne peux plus joindre le poste de mon responsable (PC4). »"],
+      ["PC3", "M. Petit — Compta (SW2)", "« Mon adresse commence par 169.254. Plus rien ne marche. »"],
+      ["PC4", "Mme Garnier — responsable RH (SW2), IP fixe", "« Aucun ping ne répond, ni vers la passerelle, ni vers les autres postes. »"]
+    ]
+  },
+  consignes: [
+    "Le plan d’adressage de l’onglet « Adressage » est la référence : c’est la configuration voulue. Toute différence est une panne.",
+    "Il y a 5 pannes. Certaines en cachent d’autres : une panne n’apparaît parfois qu’après la correction de la précédente.",
+    "Corrigez une seule chose à la fois, puis vérifiez. Après chaque correction côté DHCP, renouvelez l’adresse des PC (Desktop > IP Configuration : passer en Static puis revenir en DHCP).",
+    "Il est interdit d’effacer les configurations (erase startup-config, reload) : on dépanne, on ne refait pas tout."
+  ],
+  fiche: {
+    entetes: ["N°", "Symptôme observé", "Commande de diagnostic utilisée", "Cause trouvée", "Solution appliquée (commandes)", "Vérifié ?"],
+    lignes: [["1","","","","",""],["2","","","","",""],["3","","","","",""],["4","","","","",""],["5","","","","",""]]
+  },
+  reseaux: {
+    entetes: ["Réseau", "Adresse", "Masque", "Passerelle", "Plage DHCP"],
+    lignes: [
+      ["VLAN 10 — COMPTA", "192.168.10.0", "255.255.255.0 (/24)", "192.168.10.1", "192.168.10.11 – .254 (.1 à .10 exclues)"],
+      ["VLAN 20 — RH", "192.168.20.0", "255.255.255.0 (/24)", "192.168.20.1", "192.168.20.11 – .254 (.1 à .10 exclues)"]
+    ]
+  },
+  adressage: {
+    entetes: ["Appareil", "Interface", "Adresse IP", "Masque", "Passerelle"],
+    lignes: [
+      ["R1", "Gi0/0", "aucune (porte les sous-interfaces)", "—", "—"],
+      ["R1", "Gi0/0.10 (dot1Q 10)", "192.168.10.1", "255.255.255.0", "—"],
+      ["R1", "Gi0/0.20 (dot1Q 20)", "192.168.20.1", "255.255.255.0", "—"],
+      ["PC1", "Fa0", "DHCP (192.168.10.x)", "255.255.255.0", "192.168.10.1"],
+      ["PC2", "Fa0", "DHCP (192.168.20.x)", "255.255.255.0", "192.168.20.1"],
+      ["PC3", "Fa0", "DHCP (192.168.10.x)", "255.255.255.0", "192.168.10.1"],
+      ["PC4", "Fa0", "192.168.20.10 (fixe)", "255.255.255.0", "192.168.20.1"]
+    ]
+  },
+  liens: {
+    entetes: ["Appareil A", "Interface A", "Appareil B", "Interface B", "Câble", "Type / VLAN"],
+    lignes: [
+      ["R1", "Gi0/0", "SW1", "Fa0/1", "Droit", "Trunk 802.1Q"],
+      ["SW1", "Gi0/1", "SW2", "Gi0/1", "Croisé", "Trunk 802.1Q"],
+      ["SW1", "Fa0/2", "PC1", "Fa0", "Droit", "Accès VLAN 10"],
+      ["SW1", "Fa0/3", "PC2", "Fa0", "Droit", "Accès VLAN 20"],
+      ["SW2", "Fa0/2", "PC3", "Fa0", "Droit", "Accès VLAN 10"],
+      ["SW2", "Fa0/3", "PC4", "Fa0", "Droit", "Accès VLAN 20"]
+    ]
+  },
+  configs: [
+    { appareil: "R1 — configuration de départ AVEC PANNES (professeur)", lignes: `! Base
+Router>enable
+Router#configure terminal
+Router(config)#hostname R1
+R1(config)#no ip domain-lookup
+R1(config)#enable secret cisco
+R1(config)#line console 0
+R1(config-line)#password cisco
+R1(config-line)#login
+R1(config-line)#exit
+! Interface physique vers SW1 : pas d'adresse IP, juste activée
+R1(config)#interface gigabitEthernet 0/0
+R1(config-if)#no shutdown
+R1(config-if)#exit
+! PANNE 3 : numeros de VLAN inverses sur les sous-interfaces
+R1(config)#interface gigabitEthernet 0/0.10
+R1(config-subif)#encapsulation dot1Q 20
+R1(config-subif)#ip address 192.168.10.1 255.255.255.0
+R1(config-subif)#exit
+R1(config)#interface gigabitEthernet 0/0.20
+R1(config-subif)#encapsulation dot1Q 10
+R1(config-subif)#ip address 192.168.20.1 255.255.255.0
+R1(config-subif)#exit
+! DHCP
+R1(config)#ip dhcp excluded-address 192.168.10.1 192.168.10.10
+R1(config)#ip dhcp excluded-address 192.168.20.1 192.168.20.10
+R1(config)#ip dhcp pool COMPTA
+! PANNE 4 : mauvais reseau dans le pool COMPTA
+R1(dhcp-config)#network 192.168.100.0 255.255.255.0
+R1(dhcp-config)#default-router 192.168.10.1
+R1(dhcp-config)#exit
+R1(config)#ip dhcp pool RH
+R1(dhcp-config)#network 192.168.20.0 255.255.255.0
+R1(dhcp-config)#default-router 192.168.20.1
+R1(dhcp-config)#exit
+R1(config)#end
+R1#write memory` },
+    { appareil: "SW1 — configuration de départ AVEC PANNES (professeur)", lignes: `! Base
+Switch>enable
+Switch#configure terminal
+Switch(config)#hostname SW1
+SW1(config)#no ip domain-lookup
+! VLAN
+SW1(config)#vlan 10
+SW1(config-vlan)#name COMPTA
+SW1(config-vlan)#exit
+SW1(config)#vlan 20
+SW1(config-vlan)#name RH
+SW1(config-vlan)#exit
+! Trunks vers R1 et vers SW2
+SW1(config)#interface fastEthernet 0/1
+SW1(config-if)#switchport mode trunk
+SW1(config-if)#exit
+SW1(config)#interface gigabitEthernet 0/1
+SW1(config-if)#switchport mode trunk
+SW1(config-if)#exit
+! Ports d'acces
+SW1(config)#interface fastEthernet 0/2
+SW1(config-if)#switchport mode access
+SW1(config-if)#switchport access vlan 10
+SW1(config-if)#exit
+! PANNE 2 : PC2 (RH) place dans le VLAN 10
+SW1(config)#interface fastEthernet 0/3
+SW1(config-if)#switchport mode access
+SW1(config-if)#switchport access vlan 10
+SW1(config-if)#exit
+SW1(config)#end
+SW1#write memory` },
+    { appareil: "SW2 — configuration de départ AVEC PANNES (professeur)", lignes: `! Base
+Switch>enable
+Switch#configure terminal
+Switch(config)#hostname SW2
+SW2(config)#no ip domain-lookup
+! VLAN
+SW2(config)#vlan 10
+SW2(config-vlan)#name COMPTA
+SW2(config-vlan)#exit
+SW2(config)#vlan 20
+SW2(config-vlan)#name RH
+SW2(config-vlan)#exit
+! PANNE 1 : le lien vers SW1 est force en mode acces au lieu de trunk
+SW2(config)#interface gigabitEthernet 0/1
+SW2(config-if)#switchport mode access
+SW2(config-if)#exit
+! Ports d'acces
+SW2(config)#interface fastEthernet 0/2
+SW2(config-if)#switchport mode access
+SW2(config-if)#switchport access vlan 10
+SW2(config-if)#exit
+SW2(config)#interface fastEthernet 0/3
+SW2(config-if)#switchport mode access
+SW2(config-if)#switchport access vlan 20
+SW2(config-if)#exit
+SW2(config)#end
+SW2#write memory` }
+  ],
+  configNotes: [
+    "Postes : PC1, PC2 et PC3 en DHCP (Desktop > IP Configuration > DHCP). PC4 en IP fixe avec la PANNE 5 : adresse 192.168.20.10, masque 255.255.255.0, passerelle 192.168.20.254 (au lieu de 192.168.20.1).",
+    "Les lignes « ! PANNE » sont des commentaires : IOS les ignore, elles n’apparaissent pas dans le running-config. Les élèves ne les voient donc pas.",
+    "Conseil : enregistrez le fichier .pkt une fois les pannes en place, avant de le distribuer. Mots de passe : cisco."
+  ],
+  tests: [
+    { titre: "Diagnostic côté switchs", lignes: `SW1#show vlan brief
+SW1#show interfaces trunk
+SW2#show interfaces trunk
+SW2#show interfaces gigabitEthernet 0/1 switchport` },
+    { titre: "Diagnostic côté routeur", lignes: `R1#show ip interface brief
+R1#show interfaces gigabitEthernet 0/0.10
+R1#show interfaces gigabitEthernet 0/0.20
+R1#show ip dhcp binding
+R1#show running-config` },
+    { titre: "Tests finaux depuis les PC (après les 5 corrections)", lignes: `C:\\>ipconfig
+C:\\>ping 192.168.10.1
+C:\\>ping 192.168.20.1
+C:\\>ping 192.168.20.10
+C:\\>tracert 192.168.20.10` }
+  ],
+  testsNotes: [
+    "show interfaces trunk : sur SW1 et SW2, Gi0/1 doit apparaître en mode « on », statut « trunking », VLAN 10 et 20 autorisés et actifs. Sur SW1, Fa0/1 aussi.",
+    "show vlan brief (SW1) : Fa0/2 dans le VLAN 10 COMPTA, Fa0/3 dans le VLAN 20 RH.",
+    "show interfaces gigabitEthernet 0/0.10 : la ligne « Encapsulation 802.1Q Virtual LAN, Vlan ID 10 » doit indiquer le même numéro que la sous-interface.",
+    "show ip dhcp binding : PC1 et PC3 en 192.168.10.x, PC2 en 192.168.20.x.",
+    "Depuis PC1 : ping vers 192.168.20.10 (PC4) réussi. tracert montre 2 sauts : 192.168.10.1 puis 192.168.20.10."
+  ],
+  depannage: {
+    entetes: ["N°", "Difficulté", "Symptôme observé (au moment où on traite la panne)", "Diagnostic", "Cause", "Solution"],
+    lignes: [
+      ["1", "★★", "PC3 en 169.254.x.x (pas de DHCP). PC4 ne joint personne. Tout le côté SW2 est isolé.", "SW2#show interfaces trunk → aucun trunk. SW2#show interfaces gi0/1 switchport → « Operational Mode: static access ».", "Le lien SW2 Gi0/1 vers SW1 est en mode access : les trames étiquetées VLAN 10 et 20 ne passent pas.", "SW2 Gi0/1 : switchport mode trunk"],
+      ["2", "★", "PC2 (RH) obtient une adresse mais ne joint pas PC4, qui est pourtant du même service.", "SW1#show vlan brief → Fa0/3 est dans la ligne du VLAN 10 COMPTA.", "Le port de PC2 est affecté au mauvais VLAN.", "SW1 Fa0/3 : switchport access vlan 20"],
+      ["3", "★★★", "Les postes de la Compta (PC1, PC3) reçoivent des adresses en 192.168.20.x, et PC2 (RH) n’obtient plus rien (169.254).", "R1#show interfaces g0/0.10 → « Vlan ID 20 ». R1#show interfaces g0/0.20 → « Vlan ID 10 ».", "Les numéros dot1Q sont inversés : le VLAN 10 arrive sur la sous-interface 192.168.20.1, le VLAN 20 sur 192.168.10.1.", "Supprimer et recréer les deux sous-interfaces avec encapsulation dot1Q 10 sur .10 et dot1Q 20 sur .20"],
+      ["4", "★★", "PC2 (RH) est maintenant correct, mais PC1 et PC3 (Compta) restent en 169.254.", "R1#show ip dhcp binding → aucune adresse 192.168.10.x. R1#show running-config → pool COMPTA en network 192.168.100.0.", "Le pool COMPTA ne correspond pas au réseau de la sous-interface 192.168.10.1 : le routeur ne trouve pas de pool pour le VLAN 10.", "Pool COMPTA : network 192.168.10.0 255.255.255.0, puis renouveler le DHCP sur PC1 et PC3"],
+      ["5", "★", "PC4 pingue PC2 et 192.168.20.1, mais aucun poste de la Compta.", "C:\\>ipconfig sur PC4 → passerelle 192.168.20.254.", "La passerelle de PC4 est fausse : les paquets vers les autres réseaux partent vers une adresse qui n’existe pas.", "PC4 : passerelle 192.168.20.1 (Desktop > IP Configuration)"]
+    ]
+  },
+  reparations: [
+    { titre: "Panne 1 — remettre le trunk sur SW2", lignes: `SW2>enable
+SW2#configure terminal
+SW2(config)#interface gigabitEthernet 0/1
+SW2(config-if)#switchport mode trunk
+SW2(config-if)#end
+SW2#show interfaces trunk
+SW2#write memory` },
+    { titre: "Panne 2 — remettre PC2 dans le VLAN 20 (SW1)", lignes: `SW1>enable
+SW1#configure terminal
+SW1(config)#interface fastEthernet 0/3
+SW1(config-if)#switchport access vlan 20
+SW1(config-if)#end
+SW1#show vlan brief
+SW1#write memory` },
+    { titre: "Panne 3 — corriger l’encapsulation dot1Q sur R1", lignes: `! IOS refuse que deux sous-interfaces utilisent le meme VLAN :
+! on les supprime puis on les recree proprement
+R1>enable
+R1#configure terminal
+R1(config)#no interface gigabitEthernet 0/0.10
+R1(config)#no interface gigabitEthernet 0/0.20
+R1(config)#interface gigabitEthernet 0/0.10
+R1(config-subif)#encapsulation dot1Q 10
+R1(config-subif)#ip address 192.168.10.1 255.255.255.0
+R1(config-subif)#exit
+R1(config)#interface gigabitEthernet 0/0.20
+R1(config-subif)#encapsulation dot1Q 20
+R1(config-subif)#ip address 192.168.20.1 255.255.255.0
+R1(config-subif)#end
+R1#show interfaces gigabitEthernet 0/0.10
+R1#write memory` },
+    { titre: "Panne 4 — corriger le pool DHCP COMPTA sur R1", lignes: `R1#configure terminal
+R1(config)#ip dhcp pool COMPTA
+R1(dhcp-config)#no network 192.168.100.0 255.255.255.0
+R1(dhcp-config)#network 192.168.10.0 255.255.255.0
+R1(dhcp-config)#end
+R1#write memory
+! Sur PC1 et PC3 : IP Configuration, passer en Static puis en DHCP
+R1#show ip dhcp binding` },
+    { titre: "Panne 5 — corriger la passerelle de PC4", lignes: `! Desktop > IP Configuration (Static)
+! Default Gateway : 192.168.20.1 au lieu de 192.168.20.254
+C:\\>ipconfig
+C:\\>ping 192.168.10.1` }
+  ],
+  depannageNotes: [
+    "Ordre conseillé : du bas vers le haut (switchs, puis routeur, puis DHCP, puis poste). Les étoiles indiquent la difficulté, pas l’ordre.",
+    "Pannes en cascade : tant que la panne 3 n’est pas corrigée, réparer la panne 2 fait passer PC2 en 169.254. Ce n’est pas une erreur de l’élève : c’est la panne suivante qui apparaît. À faire remarquer en classe !",
+    "Barème possible sur 20 : 2 points par panne trouvée, 1 point par panne corrigée et vérifiée, 5 points pour le tableau complété et rédigé proprement."
+  ],
+  qcm: [
+    { q: "Un PC affiche l’adresse 169.254.12.7. Qu’est-ce que cela signifie ?", o: ["Il a reçu son adresse du serveur DHCP", "Il n’a reçu aucune réponse DHCP et s’est donné une adresse automatique (APIPA)", "Il est configuré en adresse IP fixe", "Il a reçu une adresse publique"], r: 1, e: "169.254.x.x est la plage APIPA : le poste n’a pas obtenu de bail DHCP. On cherche alors un problème de VLAN, de trunk ou de pool DHCP." },
+    { q: "Quelle commande, sur SW2, montre si Gi0/1 fonctionne en trunk ?", o: ["show vlan brief", "show ip route", "show ip dhcp binding", "show interfaces trunk"], r: 3, e: "show interfaces trunk liste les ports en trunk et les VLAN qu’ils transportent. show vlan brief n’affiche que les ports d’accès." },
+    { q: "Le port Gi0/1 de SW2 est en « switchport mode access ». Quelle est la conséquence ?", o: ["Les trames des VLAN 10 et 20 ne passent plus entre SW1 et SW2", "Tous les VLAN passent normalement", "Le câble est coupé physiquement", "Le routeur perd ses adresses IP"], r: 0, e: "Un port d’accès n’appartient qu’à un seul VLAN (ici le VLAN 1) : les trames étiquetées 10 et 20 envoyées par SW1 sont rejetées." },
+    { q: "Quelle commande remet PC2 (port Fa0/3 de SW1) dans le VLAN RH ?", o: ["switchport mode trunk", "encapsulation dot1Q 20", "switchport access vlan 20", "vlan 20 name RH"], r: 2, e: "En mode interface du switch, switchport access vlan 20 affecte le port au VLAN 20. encapsulation dot1Q est une commande de routeur." },
+    { q: "Dans « show vlan brief », le port Fa0/3 apparaît sur la ligne du VLAN 10. Que peut-on conclure ?", o: ["Le port est en trunk", "Le port est un port d’accès du VLAN 10", "Le port est désactivé", "Le VLAN 10 n’existe pas"], r: 1, e: "show vlan brief liste les ports d’accès de chaque VLAN. Un port trunk n’apparaît pas dans ce tableau." },
+    { q: "« R1#show interfaces gigabitEthernet 0/0.10 » affiche « Vlan ID 20 ». Où est le problème ?", o: ["L’interface est éteinte", "Le masque est faux", "L’encapsulation ne correspond pas au VLAN prévu pour cette sous-interface", "Le serveur DHCP est arrêté"], r: 2, e: "La sous-interface .10 devrait étiqueter le VLAN 10. Elle reçoit ici le trafic du VLAN 20 : les numéros dot1Q sont inversés." },
+    { q: "Sur un routeur, le numéro d’une sous-interface (.10) fixe-t-il le VLAN ?", o: ["Oui, .10 correspond toujours au VLAN 10", "Oui, à condition que le switch soit en trunk", "Non, c’est l’adresse IP qui fixe le VLAN", "Non, c’est la commande encapsulation dot1Q qui fixe le VLAN"], r: 3, e: "Le .10 n’est qu’un nom choisi pour être lisible. Seule la commande encapsulation dot1Q indique le VLAN traité, d’où la panne 3." },
+    { q: "Pourquoi supprime-t-on puis recrée-t-on les deux sous-interfaces pour corriger l’inversion ?", o: ["IOS refuse que deux sous-interfaces d’une même interface utilisent le même numéro de VLAN", "Pour remettre le DHCP à zéro", "Parce que Packet Tracer ne sait pas modifier une sous-interface", "Parce qu’il faut aussi recréer le trunk"], r: 0, e: "Si on tape encapsulation dot1Q 10 sur .10 alors que .20 l’utilise encore, IOS refuse. Recréer les deux évite le conflit." },
+    { q: "Le pool COMPTA contient « network 192.168.100.0 ». Que se passe-t-il pour les PC du VLAN 10 ?", o: ["Ils reçoivent des adresses 192.168.100.x", "Ils ne reçoivent aucune adresse : aucun pool ne correspond au réseau de l’interface 192.168.10.1", "Ils reçoivent des adresses du pool RH", "Rien, ça fonctionne quand même"], r: 1, e: "Le routeur choisit le pool dont le réseau contient l’adresse de l’interface qui reçoit la demande. Pas de correspondance, donc pas de bail : 169.254." },
+    { q: "Quelle commande affiche les adresses distribuées par le serveur DHCP du routeur ?", o: ["show ip dhcp binding", "show vlan brief", "show interfaces trunk", "show mac address-table"], r: 0, e: "show ip dhcp binding affiche les baux : adresse IP attribuée et adresse MAC du client." },
+    { q: "PC4 (192.168.20.10, passerelle 192.168.20.254) pingue PC2 mais aucun PC de la Compta. Cause la plus probable ?", o: ["Câble débranché", "Mauvais VLAN sur le port de PC4", "Passerelle par défaut incorrecte", "Pool DHCP RH faux"], r: 2, e: "PC4 joint son propre réseau, donc câble et VLAN sont bons. Pour sortir de son réseau, il passe par la passerelle, qui doit être 192.168.20.1." },
+    { q: "Quelle méthode de dépannage applique-t-on dans ce TP ?", o: ["Modifier plusieurs réglages en même temps pour gagner du temps", "Effacer la configuration et tout refaire", "Commencer par le routeur car c’est l’appareil le plus important", "Partir des couches basses (câbles, VLAN, trunk) vers les couches hautes, en testant après chaque correction"], r: 3, e: "La méthode ascendante évite de corriger au hasard. Tester après chaque correction permet de voir apparaître les pannes cachées." },
+    { q: "À quoi sert la norme 802.1Q ?", o: ["À ajouter dans la trame une étiquette avec le numéro de VLAN", "À attribuer des adresses IP automatiquement", "À chiffrer les échanges", "À calculer le meilleur chemin entre routeurs"], r: 0, e: "802.1Q insère une étiquette (tag) de 4 octets qui permet au trunk de transporter plusieurs VLAN sur un seul câble." },
+    { q: "Un switch 2960 travaille principalement à quelle couche du modèle OSI ?", o: ["Couche 1 — physique", "Couche 3 — réseau", "Couche 2 — liaison de données", "Couche 7 — application"], r: 2, e: "Le switch commute les trames grâce aux adresses MAC : c’est la couche 2. Le routeur travaille en couche 3 avec les adresses IP." },
+    { q: "Dans quel ordre se déroulent les échanges DHCP ?", o: ["Offer, Discover, Ack, Request", "Request, Offer, Discover, Ack", "Discover, Request, Offer, Ack", "Discover, Offer, Request, Ack"], r: 3, e: "Le client cherche (Discover), le serveur propose (Offer), le client demande (Request), le serveur confirme (Ack) : c’est DORA." },
+    { q: "Quel protocole utilise la commande ping ?", o: ["TCP", "ICMP", "DHCP", "ARP"], r: 1, e: "ping envoie des messages ICMP Echo Request et attend des Echo Reply." },
+    { q: "Le masque /24 s’écrit :", o: ["255.255.255.0", "255.255.0.0", "255.255.255.252", "255.0.0.0"], r: 0, e: "/24 signifie 24 bits à 1, soit trois octets à 255 : 255.255.255.0." },
+    { q: "Parmi ces adresses, laquelle est une adresse privée ?", o: ["8.8.8.8", "193.50.12.4", "192.168.20.10", "172.32.1.1"], r: 2, e: "Les plages privées sont 10.0.0.0/8, 172.16.0.0/12 (172.16 à 172.31) et 192.168.0.0/16. 172.32.1.1 est hors de la plage." },
+    { q: "Sur un PC Packet Tracer, quelle commande affiche l’adresse IP et la passerelle ?", o: ["show ip interface brief", "ping", "tracert", "ipconfig"], r: 3, e: "ipconfig s’utilise sur le PC (Command Prompt). show ip interface brief est une commande Cisco du routeur ou du switch." },
+    { q: "Quel câble relie un PC à un switch ?", o: ["Câble croisé", "Câble droit", "Câble série DCE", "Câble console"], r: 1, e: "Un PC et un switch sont des équipements de types différents : on utilise un câble droit." }
+  ]
+};
+/* =============================================================== */
+
+const L = ["A", "B", "C", "D"];
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function table(t) {
+  const w = el("div", "wrap"), tb = el("table"), th = el("thead"), tr = el("tr");
+  t.entetes.forEach(h => tr.append(el("th", "", h))); th.append(tr); tb.append(th);
+  const body = el("tbody");
+  t.lignes.forEach(r => { const row = el("tr"); r.forEach(c => row.append(el("td", "", c))); body.append(row); });
+  tb.append(body); w.append(tb); return w;
+}
+const PROMPT = /^([^\s>#]+(?:\([^)]*\))?[>#])(.*)$/;
+function code(titre, texte, h) {
+  const box = el("div", "code"); box.style.setProperty("--h", h);
+  const bar = el("div", "bar"); bar.append(el("span", "", titre));
+  const btn = el("button", "", "Copier les commandes"); btn.type = "button"; bar.append(btn);
+  const pre = el("pre"); const cmds = [];
+  texte.split("\n").forEach((ligne, i) => {
+    if (i) pre.append("\n");
+    if (ligne.trim().startsWith("!")) { pre.append(el("span", "c", ligne)); return; }
+    const m = ligne.match(PROMPT);
+    if (m) { pre.append(el("span", "p", m[1]), el("span", "m", m[2])); cmds.push(m[2]); }
+    else { pre.append(ligne); }
+  });
+  btn.onclick = async () => {
+    const t = cmds.join("\n");
+    try { await navigator.clipboard.writeText(t); btn.textContent = "Copié ✔"; }
+    catch (e) { const ta = el("textarea"); ta.value = t; document.body.append(ta); ta.select(); try { document.execCommand("copy"); btn.textContent = "Copié ✔"; } catch (e2) { btn.textContent = "Copie impossible"; } ta.remove(); }
+    setTimeout(() => btn.textContent = "Copier les commandes", 1800);
+  };
+  box.append(bar, pre); return box;
+}
+function P(id) { return document.getElementById(id); }
+function hue(id) { return P(id).dataset.h; }
+
+/* En-tête */
+document.title = TP.titre; P("titre").textContent = TP.titre; P("soustitre").textContent = TP.sousTitre;
+
+/* Énoncé */
+(function () {
+  const s = P("enonce"); s.append(el("h2", "", "Énoncé du TP"));
+  TP.enonce.forEach(t => s.append(el("p", "", t)));
+  s.append(el("h3", "", "Objectifs")); const ul = el("ul", "obj"); TP.objectifs.forEach(o => ul.append(el("li", "", o))); s.append(ul);
+  s.append(el("h3", "", "Matériel")); const um = el("ul", "obj"); TP.materiel.forEach(o => um.append(el("li", "", o))); s.append(um);
+})();
+
+/* Adressage */
+(function () {
+  const s = P("adressage"); s.append(el("h2", "", "Plan d’adressage"));
+  s.append(el("h3", "", "Réseaux")); s.append(table(TP.reseaux));
+  s.append(el("h3", "", "Adresses des appareils")); s.append(table(TP.adressage));
+  s.append(el("h3", "", "Table des liens (câblage)")); s.append(table(TP.liens));
+  if (TP.flux) { s.append(el("h3", "", "Politique de filtrage (matrice des flux)")); s.append(table(TP.flux)); }
+})();
+
+/* Configuration CLI */
+(function () {
+  const s = P("config"); s.append(el("h2", "", "Configuration CLI"));
+  s.append(el("div", "note", "Chaque commande est précédée de son prompt. Le bouton « Copier » ne copie que les commandes, sans les prompts."));
+  TP.configs.forEach(c => s.append(code(c.appareil, c.lignes, hue("config"))));
+  (TP.configNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+/* Vérifications */
+(function () {
+  const s = P("tests"); s.append(el("h2", "", "Vérifications et tests"));
+  TP.tests.forEach(t => s.append(code(t.titre, t.lignes, hue("tests"))));
+  (TP.testsNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+
+/* Ticket d'incident, consignes et fiche élève (onglet Énoncé) */
+(function () {
+  const s = P("enonce");
+  s.append(el("h3", "", "🎫 Ticket d’incident n° 2611-07 — priorité haute"));
+  s.append(table(TP.ticket));
+  s.append(el("h3", "", "Consignes"));
+  const ul = el("ul", "obj"); TP.consignes.forEach(o => ul.append(el("li", "", o))); s.append(ul);
+  s.append(el("h3", "", "Fiche d’intervention à compléter"));
+  s.append(table(TP.fiche));
+})();
+
+/* Corrigé du dépannage */
+(function () {
+  const s = P("depannage"); s.append(el("h2", "", "Corrigé du dépannage"));
+  s.append(el("div", "note", "Onglet réservé au professeur. Les pannes sont numérotées dans l’ordre de traitement conseillé."));
+  s.append(el("h3", "", "Tableau symptôme / cause / solution"));
+  s.append(table(TP.depannage));
+  s.append(el("h3", "", "Commandes de réparation"));
+  TP.reparations.forEach(r => s.append(code(r.titre, r.lignes, hue("depannage"))));
+  (TP.depannageNotes || []).forEach(n => s.append(el("div", "note", n)));
+})();
+
+/* QCM */
+(function () {
+  const s = P("qcm"); s.append(el("h2", "", "QCM — " + TP.qcm.length + " questions"));
+  const cards = [];
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    q.o.forEach((o, j) => {
+      const lab = el("label"); const r = el("input"); r.type = "radio"; r.name = "q" + i; r.value = j;
+      lab.append(r, " " + L[j] + ". " + o); c.append(lab);
+    });
+    cards.push(c); s.append(c);
+  });
+  const btn = el("button", "btn", "Valider mes réponses"); btn.type = "button";
+  const sc = el("span"); sc.id = "score"; sc.setAttribute("aria-live", "polite");
+  btn.onclick = () => {
+    let ok = 0;
+    TP.qcm.forEach((q, i) => {
+      const ch = document.querySelector('input[name="q' + i + '"]:checked');
+      const good = ch && Number(ch.value) === q.r; if (good) ok++;
+      cards[i].classList.toggle("ok", !!good); cards[i].classList.toggle("ko", !good);
+    });
+    sc.textContent = "Score : " + ok + " / " + TP.qcm.length + " — explications dans l’onglet Corrigé";
+  };
+  s.append(btn, sc);
+})();
+
+/* Corrigé */
+(function () {
+  const s = P("corrige"); s.append(el("h2", "", "Corrigé du QCM"));
+  const g = el("p", "grille", TP.qcm.map((q, i) => (i + 1) + "-" + L[q.r]).join("  ·  ")); s.append(g);
+  TP.qcm.forEach((q, i) => {
+    const c = el("div", "q"); c.append(el("p", "", (i + 1) + ". " + q.q));
+    c.append(el("div", "", "Réponse " + L[q.r] + " — " + q.o[q.r])); c.append(el("div", "note", q.e)); s.append(c);
+  });
+})();
+
+/* Onglets */
+const panels = Array.from(document.querySelectorAll("section.panel")), nav = P("tabs");
+panels.forEach((p, i) => {
+  p.style.setProperty("--h", p.dataset.h);
+  const b = el("button", "tab", p.dataset.label); b.type = "button"; b.setAttribute("role", "tab");
+  b.style.setProperty("--h", p.dataset.h); b.onclick = () => show(i); nav.append(b);
+});
+function show(i, noHash) {
+  panels.forEach((p, j) => { p.hidden = j !== i; nav.children[j].classList.toggle("on", j === i); nav.children[j].setAttribute("aria-selected", j === i ? "true" : "false"); });
+  if (!noHash) { try { history.replaceState(null, "", "#" + panels[i].id); } catch (e) {} }
+}
+function fromHash() { const k = panels.findIndex(p => "#" + p.id === location.hash); show(k < 0 ? 0 : k, true); }
+window.addEventListener("hashchange", fromHash); fromHash();
+</script>
+</body>
+</html>

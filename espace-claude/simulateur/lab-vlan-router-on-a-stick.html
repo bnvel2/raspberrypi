@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lab Packet Tracer : VLAN, trunk, router-on-a-stick, DHCP</title>
+<style>
+:root{--bg:#fff;--fg:#1f1e1d;--mu:#5f5e5a;--bd:#d3d1c7;--pre:#f1efe8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1e1d;--fg:#f1efe8;--mu:#b4b2a9;--bd:#444441;--pre:#2c2c2a}}
+:root[data-theme="dark"]{--bg:#1f1e1d;--fg:#f1efe8;--mu:#b4b2a9;--bd:#444441;--pre:#2c2c2a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0 auto;max-width:860px;padding:16px;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:18px;margin:0 0 10px}
+.sub{color:var(--mu);margin:0 0 14px;font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tab{border:2px solid var(--c);background:transparent;color:var(--fg);padding:6px 11px;border-radius:8px;cursor:pointer;font:inherit;font-size:14px}
+.tab.on{background:var(--c);color:#fff}
+#app{border-top:5px solid var(--c);background:color-mix(in srgb,var(--c) 8%,transparent);border-radius:8px;padding:16px}
+pre{background:var(--pre);border-left:4px solid var(--c);border-radius:6px;padding:10px 12px;overflow-x:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+code{font:13px ui-monospace,Menlo,Consolas,monospace;background:var(--pre);padding:1px 4px;border-radius:4px}
+.nav{display:flex;justify-content:space-between;margin-top:14px}
+.nav button{border:2px solid var(--c);background:transparent;color:var(--fg);padding:6px 14px;border-radius:8px;cursor:pointer;font:inherit}
+.nav button:disabled{opacity:.3;cursor:default}
+.net{text-align:center;font-size:14px}
+.b{border:1.5px solid var(--k);border-radius:8px;padding:6px 8px;background:color-mix(in srgb,var(--k) 14%,transparent)}
+.tr{background:color-mix(in srgb,#7F77DD 30%,transparent);border-radius:6px;padding:5px 8px;font-size:13px;margin:8px auto;max-width:300px}
+.two{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start}
+.pcs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.q{margin:0 0 12px;font-size:15px}.q div{padding-left:14px}
+small{font-size:12px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<h1>Lab Packet Tracer : VLAN, trunk, router-on-a-stick, DHCP</h1>
+<p class="sub">Parcours en 7 étapes : suivez les onglets de gauche à droite.</p>
+<div class="tabs" id="tabs"></div>
+<div id="app">
+<section>
+<h2>1 · Schéma et plan d’adressage</h2>
+<svg width="100%" viewBox="0 0 680 430" role="img" aria-label="Synoptique du lab : R1, SW1, SW2, quatre PC, interfaces et adresses IP"><title>Synoptique du lab VLAN</title>
+<line x1="165" y1="116" x2="165" y2="190" style="stroke:#7F77DD;stroke-width:3" stroke-linecap="round"/>
+<line x1="270" y1="222" x2="410" y2="222" style="stroke:#7F77DD;stroke-width:3" stroke-linecap="round"/>
+<line x1="102" y1="254" x2="102" y2="340" style="stroke:#1D9E75;stroke-width:2" stroke-linecap="round"/>
+<line x1="238" y1="254" x2="238" y2="340" style="stroke:#D85A30;stroke-width:2" stroke-linecap="round"/>
+<line x1="452" y1="254" x2="452" y2="340" style="stroke:#1D9E75;stroke-width:2" stroke-linecap="round"/>
+<line x1="588" y1="254" x2="588" y2="340" style="stroke:#D85A30;stroke-width:2" stroke-linecap="round"/>
+<rect x="20" y="20" width="290" height="96" rx="8" style="fill:color-mix(in srgb,#888780 14%,transparent);stroke:#888780;stroke-width:1.5"/>
+<text x="165" y="35" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">R1 · routeur 1941 · serveur DHCP</text>
+<rect x="32" y="50" width="266" height="26" rx="4" style="fill:color-mix(in srgb,#1D9E75 14%,transparent);stroke:#1D9E75;stroke-width:1"/>
+<text x="165" y="63" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">Gi0/0.10 · 192.168.10.1/24 · VLAN 10</text>
+<rect x="32" y="82" width="266" height="26" rx="4" style="fill:color-mix(in srgb,#D85A30 14%,transparent);stroke:#D85A30;stroke-width:1"/>
+<text x="165" y="95" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">Gi0/0.20 · 192.168.20.1/24 · VLAN 20</text>
+<rect x="60" y="190" width="210" height="64" rx="8" style="fill:color-mix(in srgb,#888780 14%,transparent);stroke:#888780;stroke-width:1.5"/>
+<text x="165" y="209" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">SW1 · switch 2960</text>
+<text x="165" y="232" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">VLAN 10 COMPTA · VLAN 20 RH</text>
+<rect x="410" y="190" width="210" height="64" rx="8" style="fill:color-mix(in srgb,#888780 14%,transparent);stroke:#888780;stroke-width:1.5"/>
+<text x="515" y="209" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">SW2 · switch 2960</text>
+<text x="515" y="232" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">VLAN 10 COMPTA · VLAN 20 RH</text>
+<text x="173" y="136" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Gi0/0</text>
+<text x="173" y="158" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#7F77DD">Trunk 802.1Q</text>
+<text x="173" y="180" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0/1</text>
+<text x="276" y="208" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Gi0/1</text>
+<text x="404" y="208" text-anchor="end" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Gi0/1</text>
+<text x="340" y="240" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#7F77DD">Trunk 802.1Q</text>
+<text x="110" y="272" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0/2</text>
+<text x="110" y="297" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#1D9E75">VLAN 10</text>
+<text x="110" y="326" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0</text>
+<rect x="40" y="340" width="124" height="76" rx="8" style="fill:color-mix(in srgb,#1D9E75 14%,transparent);stroke:#1D9E75;stroke-width:1.5"/>
+<text x="102" y="358" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">PC1</text>
+<text x="102" y="378" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">192.168.10.11/24</text>
+<text x="102" y="398" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">GW 192.168.10.1</text>
+<text x="246" y="272" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0/3</text>
+<text x="246" y="297" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#D85A30">VLAN 20</text>
+<text x="246" y="326" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0</text>
+<rect x="176" y="340" width="124" height="76" rx="8" style="fill:color-mix(in srgb,#D85A30 14%,transparent);stroke:#D85A30;stroke-width:1.5"/>
+<text x="238" y="358" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">PC3</text>
+<text x="238" y="378" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">192.168.20.11/24</text>
+<text x="238" y="398" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">GW 192.168.20.1</text>
+<text x="460" y="272" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0/2</text>
+<text x="460" y="297" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#1D9E75">VLAN 10</text>
+<text x="460" y="326" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0</text>
+<rect x="390" y="340" width="124" height="76" rx="8" style="fill:color-mix(in srgb,#1D9E75 14%,transparent);stroke:#1D9E75;stroke-width:1.5"/>
+<text x="452" y="358" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">PC2</text>
+<text x="452" y="378" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">192.168.10.12/24</text>
+<text x="452" y="398" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">GW 192.168.10.1</text>
+<text x="596" y="272" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0/3</text>
+<text x="596" y="297" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:#D85A30">VLAN 20</text>
+<text x="596" y="326" text-anchor="start" dominant-baseline="central" style="font-size:12px;font-weight:500;fill:var(--fg)">Fa0</text>
+<rect x="526" y="340" width="124" height="76" rx="8" style="fill:color-mix(in srgb,#D85A30 14%,transparent);stroke:#D85A30;stroke-width:1.5"/>
+<text x="588" y="358" text-anchor="middle" dominant-baseline="central" style="font-size:14px;font-weight:500;fill:var(--fg)">PC4</text>
+<text x="588" y="378" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--fg)">192.168.20.12/24</text>
+<text x="588" y="398" text-anchor="middle" dominant-baseline="central" style="font-size:12px;font-weight:400;fill:var(--mu)">GW 192.168.20.1</text>
+</svg>
+<div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;margin-top:8px"><span><b style="display:inline-block;width:22px;height:4px;background:#7F77DD;vertical-align:middle"></b> Trunk 802.1Q (VLAN 10 et 20)</span><span><b style="display:inline-block;width:22px;height:3px;background:#1D9E75;vertical-align:middle"></b> VLAN 10 · COMPTA · 192.168.10.0/24</span><span><b style="display:inline-block;width:22px;height:3px;background:#D85A30;vertical-align:middle"></b> VLAN 20 · RH · 192.168.20.0/24</span></div><p class="sub" style="margin-top:6px">Adresses des PC attribuées par DHCP (relevées dans Packet Tracer) ; Gi0/0 du routeur n’a pas d’IP, elles sont portées par les sous-interfaces.</p>
+<table style="margin-top:12px"><tr><th>VLAN</th><th>Nom</th><th>Réseau</th><th>Passerelle</th></tr>
+<tr><td>10</td><td>COMPTA</td><td>192.168.10.0/24</td><td>192.168.10.1</td></tr>
+<tr><td>20</td><td>RH</td><td>192.168.20.0/24</td><td>192.168.20.1</td></tr></table>
+<p>Câbles droits cuivre. Matériel : un routeur 1941 ou 2911, deux switchs 2960, quatre PC.</p>
+</section>
+<section>
+<h2>2 · Configuration de R1</h2>
+<p>Le prompt est indiqué avant chaque commande : saisissez uniquement ce qui suit le <code>#</code> ou le <code>&gt;</code>.</p>
+<pre>Router&gt;enable
+Router#configure terminal
+Router(config)#hostname R1
+R1(config)#interface gigabitEthernet 0/0
+R1(config-if)#no shutdown
+R1(config-if)#exit
+R1(config)#interface gigabitEthernet 0/0.10
+R1(config-subif)#encapsulation dot1Q 10
+R1(config-subif)#ip address 192.168.10.1 255.255.255.0
+R1(config-subif)#exit
+R1(config)#interface gigabitEthernet 0/0.20
+R1(config-subif)#encapsulation dot1Q 20
+R1(config-subif)#ip address 192.168.20.1 255.255.255.0
+R1(config-subif)#exit
+R1(config)#ip dhcp excluded-address 192.168.10.1 192.168.10.10
+R1(config)#ip dhcp excluded-address 192.168.20.1 192.168.20.10
+R1(config)#ip dhcp pool VLAN10
+R1(dhcp-config)#network 192.168.10.0 255.255.255.0
+R1(dhcp-config)#default-router 192.168.10.1
+R1(dhcp-config)#dns-server 8.8.8.8
+R1(dhcp-config)#exit
+R1(config)#ip dhcp pool VLAN20
+R1(dhcp-config)#network 192.168.20.0 255.255.255.0
+R1(dhcp-config)#default-router 192.168.20.1
+R1(dhcp-config)#dns-server 8.8.8.8
+R1(dhcp-config)#exit
+R1(config)#end
+R1#write memory</pre>
+</section>
+<section>
+<h2>3 · Configuration des switchs</h2>
+<p>SW1 (trunk vers R1 sur Fa0/1, trunk vers SW2 sur Gi0/1). Saisissez uniquement ce qui suit le prompt :</p>
+<pre>Switch&gt;enable
+Switch#configure terminal
+Switch(config)#hostname SW1
+SW1(config)#vlan 10
+SW1(config-vlan)#name COMPTA
+SW1(config-vlan)#exit
+SW1(config)#vlan 20
+SW1(config-vlan)#name RH
+SW1(config-vlan)#exit
+SW1(config)#interface fastEthernet 0/1
+SW1(config-if)#switchport mode trunk
+SW1(config-if)#exit
+SW1(config)#interface gigabitEthernet 0/1
+SW1(config-if)#switchport mode trunk
+SW1(config-if)#exit
+SW1(config)#interface fastEthernet 0/2
+SW1(config-if)#switchport mode access
+SW1(config-if)#switchport access vlan 10
+SW1(config-if)#exit
+SW1(config)#interface fastEthernet 0/3
+SW1(config-if)#switchport mode access
+SW1(config-if)#switchport access vlan 20
+SW1(config-if)#exit
+SW1(config)#end
+SW1#write memory</pre>
+<p>SW2 (même chose, sans le port Fa0/1) :</p>
+<pre>Switch&gt;enable
+Switch#configure terminal
+Switch(config)#hostname SW2
+SW2(config)#vlan 10
+SW2(config-vlan)#name COMPTA
+SW2(config-vlan)#exit
+SW2(config)#vlan 20
+SW2(config-vlan)#name RH
+SW2(config-vlan)#exit
+SW2(config)#interface gigabitEthernet 0/1
+SW2(config-if)#switchport mode trunk
+SW2(config-if)#exit
+SW2(config)#interface fastEthernet 0/2
+SW2(config-if)#switchport mode access
+SW2(config-if)#switchport access vlan 10
+SW2(config-if)#exit
+SW2(config)#interface fastEthernet 0/3
+SW2(config-if)#switchport mode access
+SW2(config-if)#switchport access vlan 20
+SW2(config-if)#exit
+SW2(config)#end
+SW2#write memory</pre>
+</section>
+<section>
+<h2>4 · Les commandes expliquées</h2>
+<table>
+<tr><th>Commande</th><th>Rôle</th></tr>
+<tr><td><code>no shutdown</code></td><td>Active l’interface, désactivée par défaut sur un routeur.</td></tr>
+<tr><td><code>interface gi0/0.10</code></td><td>Crée une sous-interface logique ; aucune IP sur l’interface physique.</td></tr>
+<tr><td><code>encapsulation dot1Q 10</code></td><td>Associe la sous-interface aux trames étiquetées VLAN 10 (le vrai VLAN ID).</td></tr>
+<tr><td><code>ip address 192.168.10.1 …</code></td><td>Passerelle par défaut des machines du VLAN 10.</td></tr>
+<tr><td><code>ip dhcp excluded-address</code></td><td>Retire des adresses de la plage distribuée (passerelle, équipements fixes).</td></tr>
+<tr><td><code>ip dhcp pool VLAN10</code></td><td>Crée le pool DHCP du réseau 192.168.10.0/24.</td></tr>
+<tr><td><code>default-router</code>, <code>dns-server</code></td><td>Passerelle et DNS transmis aux clients.</td></tr>
+<tr><td><code>vlan 10</code> / <code>name COMPTA</code></td><td>Crée et nomme le VLAN sur le switch.</td></tr>
+<tr><td><code>switchport mode access</code> + <code>access vlan 10</code></td><td>Port d’un PC placé dans le VLAN 10.</td></tr>
+<tr><td><code>switchport mode trunk</code></td><td>Port qui transporte plusieurs VLAN en 802.1Q.</td></tr>
+<tr><td><code>write memory</code></td><td>Sauvegarde la configuration (running → startup).</td></tr>
+</table>
+</section>
+<section>
+<h2>5 · Vérifications et dépannage</h2>
+<pre>SW1#show vlan brief
+SW1#show interfaces trunk
+R1#show ip interface brief
+R1#show ip dhcp binding
+R1#show ip route</pre>
+<p>Chaque PC : Desktop → IP Configuration → DHCP. Attendu : 192.168.10.11 et plus en VLAN 10, 192.168.20.11 et plus en VLAN 20.</p>
+<p>Test : <code>ping</code> de PC1 vers sa passerelle, puis vers PC4. Le premier paquet peut être perdu (ARP), c’est normal.</p>
+<p>Pas d’adresse DHCP ? Vérifiez que Gi0/0 n’est pas en shutdown, que les deux trunks sont actifs et que les ports PC sont dans le bon VLAN.</p>
+</section>
+<section>
+<h2>6 · QCM (20 questions, bac pro CIEL)</h2>
+<div id="qcm"></div>
+</section>
+<section>
+<h2>7 · Corrigé du QCM</h2>
+<table id="cor"><tr><th>Q</th><th>Réponse</th><th>Explication</th></tr></table>
+</section>
+</div>
+<div class="nav" id="nav"><button id="pv">← Précédent</button><button id="nx">Suivant →</button></div>
+<script>
+var N=["1 · Schéma","2 · R1","3 · Switchs","4 · Explications","5 · Tests","6 · QCM","7 · Corrigé"];
+var C=["#534AB7","#185FA5","#0F6E56","#854F0B","#993C1D","#993556","#3B6D11"];
+var Q=[
+["À quoi sert un VLAN ?",["Chiffrer les échanges","Augmenter le débit des liens","Segmenter un réseau local en domaines de diffusion logiques","Attribuer des adresses IP automatiquement"],2,"Il découpe le réseau en domaines de diffusion séparés."],
+["Combien de VLAN dans le TP ?",["1 : le VLAN 1","2 : le 10 et le 20","3 : 10, 20 et 30","2 : le 1 et le 10"],1,"VLAN 10 (COMPTA) et VLAN 20 (RH)."],
+["Sans routeur, PC1 (VLAN 10) joint-il PC3 (VLAN 20) ?",["Oui, même switch","Oui, grâce au trunk","Oui, si même masque","Non : il faut un équipement de niveau 3"],3,"Deux VLAN sont deux réseaux distincts."],
+["Commande créant le VLAN 10 sur un switch ?",["vlan 10","create vlan 10","ip vlan 10","switchport vlan 10"],0,"En configuration globale."],
+["Commande plaçant Fa0/2 dans le VLAN 10 ?",["switchport mode trunk","vlan 10 access","switchport access vlan 10","switchport trunk allowed vlan 10"],2,"Après switchport mode access."],
+["Rôle d’un lien trunk ?",["Relier un PC au switch","Éviter les boucles","Se connecter à Internet","Faire circuler plusieurs VLAN sur un même lien"],3,"Les trames sont étiquetées par VLAN."],
+["Norme de marquage des trames d’un trunk ?",["802.1Q","802.3","802.11","802.1X"],0,"802.1Q, aussi appelée dot1Q."],
+["Que fait 802.1Q ?",["Il chiffre la trame","Il ajoute un tag avec le numéro de VLAN","Il change l’adresse MAC source","Il remplace l’IP destination"],1,"Tag de 4 octets contenant le VLAN ID."],
+["Quels liens sont en trunk dans le TP ?",["Tous les liens","Les liens PC–switch","R1 Gi0/0 ↔ SW1 Fa0/1 et SW1 Gi0/1 ↔ SW2 Gi0/1","Seulement SW1 ↔ SW2"],2,"Les liens vers les PC sont en accès."],
+["« Router-on-a-stick » désigne :",["Un routeur par VLAN","Un switch qui route sans routeur","Un routeur sans IP","Un seul lien routeur–switch avec une sous-interface par VLAN"],3,"Un trunk, des sous-interfaces."],
+["Pourquoi aucune IP sur Gi0/0 ?",["Les IP sont sur les sous-interfaces .10 et .20","IOS l’interdit","Elle vient du DHCP","Il y en a une par défaut"],0,"L’interface physique sert de support."],
+["Commande liant Gi0/0.20 au VLAN 20 ?",["switchport access vlan 20","encapsulation dot1Q 20","vlan 20 encapsulation","switchport trunk native vlan 20"],1,"Le 20 est le vrai VLAN ID."],
+["Passerelle de PC3 (VLAN 20) ?",["192.168.10.1","192.168.20.0","192.168.20.1","192.168.20.255"],2,"IP de la sous-interface Gi0/0.20."],
+["Pourquoi no shutdown sur Gi0/0 ?",["Effacer la config","Activer le DHCP","Sauvegarder","Activer l’interface, éteinte par défaut"],3,"« Administratively down » par défaut."],
+["Effet de ip dhcp excluded-address 192.168.10.1 192.168.10.10 ?",["Le DHCP ne distribue pas ces adresses","Elles n’accèdent plus au réseau","Elles vont au VLAN 20","Les pings vers elles sont bloqués"],0,"Réserve passerelle et équipements fixes."],
+["PC1 n’obtient pas d’adresse DHCP : cause probable ?",["Le routeur s’appelle R1","Gi0/0 en shutdown ou trunk mal configuré","Le VLAN 10 s’appelle COMPTA","Le port du PC est en mode access"],1,"Les requêtes n’atteignent pas R1."],
+["Rôle de default-router dans un pool DHCP ?",["Donner le DNS","Définir le masque","Transmettre la passerelle aux clients","Indiquer l’adresse du switch"],2,"Option « passerelle »."],
+["Commande listant les VLAN et leurs ports ?",["show ip dhcp binding","show ip route","show interfaces trunk","show vlan brief"],3,"À lancer sur le switch."],
+["Commande listant les baux DHCP sur R1 ?",["show ip dhcp binding","show vlan brief","show interfaces trunk","show ip route"],0,"Adresses attribuées et MAC."],
+["Ping PC1 → PC4 : premier paquet perdu, puis OK. Pourquoi ?",["Pare-feu","Résolution ARP","Masque incorrect","Trunk coupé"],1,"L’ARP découvre les adresses MAC."]
+];
+var L="ABCD",cur=0,T=[],S=document.querySelectorAll("section"),app=document.getElementById("app");
+document.getElementById("qcm").innerHTML=Q.map(function(x,i){return '<div class="q"><b>'+(i+1)+'. '+x[0]+'</b>'+x[1].map(function(o,j){return '<div>'+L[j]+') '+o+'</div>'}).join('')+'</div>'}).join('');
+document.getElementById("cor").innerHTML+=Q.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td><b>'+L[x[2]]+'</b> · '+x[1][x[2]]+'</td><td>'+x[3]+'</td></tr>'}).join('');
+var tb=document.getElementById("tabs");
+N.forEach(function(n,i){var b=document.createElement("button");b.className="tab";b.textContent=n;b.style.setProperty("--c",C[i]);b.onclick=function(){go(i)};tb.appendChild(b);T.push(b)});
+function go(n){cur=n;T.forEach(function(t,i){t.classList.toggle("on",i==n)});S.forEach(function(s,i){s.hidden=i!=n});document.documentElement.style.setProperty("--c",C[n]);document.getElementById("pv").disabled=n==0;document.getElementById("nx").disabled=n==6;window.scrollTo(0,0)}
+document.getElementById("pv").onclick=function(){go(cur-1)};
+document.getElementById("nx").onclick=function(){go(cur+1)};
+go(0);
+</script>
+</body>
+</html>
