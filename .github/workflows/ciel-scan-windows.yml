@@ -1,0 +1,31 @@
+name: Construire ciel-scan.exe (Windows)
+
+# Se lance quand le projet change sur la branche ciel-scan, ou à la main depuis l'onglet « Actions ».
+on:
+  push:
+    paths:
+      - "espace-claude/logiciel/ciel-scan/**"
+      - ".github/workflows/ciel-scan-windows.yml"
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: espace-claude/logiciel/ciel-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      # Les tests tournent aussi sous Windows : ils valident le code propre à ce système.
+      - name: Tests
+        run: cargo test --release
+
+      - name: Compilation
+        run: cargo build --release
+
+      - name: Publier l'exécutable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciel-scan-windows
+          path: espace-claude/logiciel/ciel-scan/target/release/ciel-scan.exe

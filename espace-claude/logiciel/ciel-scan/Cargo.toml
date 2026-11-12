@@ -1,0 +1,24 @@
+[package]
+name = "ciel-scan"
+version = "0.1.0"
+edition = "2021"
+description = "Scanner réseau pédagogique pour le bac pro CIEL (écrit de zéro, sans code tiers de scanner)"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+dns-lookup = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_NetManagement",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
