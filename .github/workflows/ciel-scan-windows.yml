@@ -11,6 +11,8 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: espace-claude/logiciel/ciel-scan
@@ -29,3 +31,15 @@ jobs:
         with:
           name: ciel-scan-windows
           path: espace-claude/logiciel/ciel-scan/target/release/ciel-scan.exe
+
+      # Range aussi l'exécutable dans l'onglet « logiciel » du dépôt, à côté des autres programmes.
+      - name: Ranger l'exécutable dans le dépôt
+        shell: bash
+        working-directory: .
+        run: |
+          cp espace-claude/logiciel/ciel-scan/target/release/ciel-scan.exe espace-claude/logiciel/ciel-scan.exe
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add espace-claude/logiciel/ciel-scan.exe
+          git commit -m "ciel-scan.exe compilé sous Windows" || exit 0
+          git push
