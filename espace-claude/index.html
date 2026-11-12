@@ -67,6 +67,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
   <h2>Logiciels Windows</h2>
   <div class="grid">
     <a class="card dl" href="logiciel/SimReseau-final.exe" download><b>SimRéseau — simulateur réseau (Windows)</b><span>SimReseau-final.exe · 8 Mo · Windows 10/11 64 bits · sans installation</span></a>
+    <a class="card dl" href="logiciel/ciel-scan.exe" download><b>ciel-scan — scanner réseau pédagogique (Windows)</b><span>ciel-scan.exe · 0,7 Mo · Windows 64 bits · ligne de commande · sans installation</span></a>
   </div>
   <h2>SimRéseau</h2>
   <p>Réécriture du « Simulateur réseau » v2 de Pierre Loisel (Réseau CERTA), sans le bug de Windows 11 qui posait plusieurs PC ou switchs à la fois. Quatre modes : Conception, Ethernet (hub, switch, collisions CSMA/CD, VLAN, spanning tree), IP (ARP, routage, ping, Internet) et Transport (ports TCP/UDP, NAT/PAT, filtrage).</p>
@@ -77,6 +78,19 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
     <li>Menu Fichier › Exemples pour démarrer, ou Fichier › Ouvrir pour reprendre un réseau <code>.xml</code> de l’ancien simulateur CERTA.</li>
   </ol>
   <p class="note">Sur GitHub, le fichier se télécharge aussi depuis le dossier <code>espace-claude/logiciel/</code> (bouton « Download raw file »).</p>
+  <h2>ciel-scan</h2>
+  <p>Scanner réseau écrit en Rust pour le bac pro CIEL, sur le modèle des scanners d’administration : balayage d’une plage d’adresses (ping), ports TCP ouverts, nom DNS, adresse MAC et fabricant, SNMP v2c, dossiers partagés Windows, réveil à distance (Wake-on-LAN) et export CSV. Le code est écrit de zéro à partir des protocoles publics et se lit en classe : <a href="https://github.com/bnvel2/raspberrypi/tree/main/espace-claude/logiciel/ciel-scan">code source et README</a>.</p>
+  <p class="note warn">À n’utiliser que sur un réseau dont on a l’autorisation. Par défaut, le programme refuse les adresses publiques.</p>
+  <ol class="steps">
+    <li>Cliquer sur la carte « ciel-scan » ci-dessus pour télécharger <code>ciel-scan.exe</code>.</li>
+    <li>C’est un programme en ligne de commande : un double-clic ouvre puis ferme aussitôt la fenêtre. Ouvrir PowerShell dans le dossier du téléchargement (Maj + clic droit › « Ouvrir dans le terminal »).</li>
+    <li>Lancer une commande, en adaptant l’adresse du réseau :</li>
+  </ol>
+  <pre>.\ciel-scan.exe scan 192.168.1.0/24
+.\ciel-scan.exe scan 192.168.1.1-50 --ports 22,80,443,3389 --csv resultat.csv
+.\ciel-scan.exe wol AA:BB:CC:DD:EE:FF --diffusion 192.168.1.255
+.\ciel-scan.exe --help</pre>
+  <p>Si Windows affiche « Windows a protégé votre ordinateur » : « Informations complémentaires » puis « Exécuter quand même » (le programme n’est pas signé). Pour afficher le fabricant de toutes les cartes réseau, ajouter <code>--oui oui.csv</code> avec la base publique de l’IEEE.</p>
 </section>
 <section id="p-ha" hidden>
   <div class="guide" id="ha-guide">
