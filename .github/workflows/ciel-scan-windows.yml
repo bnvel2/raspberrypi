@@ -1,11 +1,7 @@
 name: Construire ciel-scan.exe (Windows)
 
-# Se lance quand le projet change sur la branche ciel-scan, ou à la main depuis l'onglet « Actions ».
+# Se lance à la demande : onglet « Actions », « Construire ciel-scan.exe (Windows) », « Run workflow ».
 on:
-  push:
-    paths:
-      - "espace-claude/logiciel/ciel-scan/**"
-      - ".github/workflows/ciel-scan-windows.yml"
   workflow_dispatch:
 
 jobs:
