@@ -1,0 +1,15 @@
+# Réapplique les règles Bastion à chaque démarrage (Linux).
+# Installation :  sudo cp extras/bastion.service /etc/systemd/system/
+#                 (modifiez le chemin ExecStart)  puis  sudo systemctl enable --now bastion
+[Unit]
+Description=Bastion - réapplication des règles du pare-feu
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /opt/bastion-firewall/pare_feu.py --apply
+
+[Install]
+WantedBy=multi-user.target
