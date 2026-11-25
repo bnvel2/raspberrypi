@@ -66,7 +66,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
 <section id="p-log" hidden>
   <h2>Logiciels Windows</h2>
   <div class="grid">
-    <a class="card dl" href="logiciel/SimreseauServeur.exe" download><b>SimRéseau Serveur — avec DHCP, DNS et Web (Windows)</b><span>SimreseauServeur.exe · 8 Mo · Windows 10/11 64 bits · sans installation</span></a>
+    <a class="card dl" href="logiciel/SimreseauServeur.zip" download><b>SimRéseau Serveur — avec DHCP, DNS et Web (Windows, .zip)</b><span>SimreseauServeur.zip · 6 Mo · à décompresser · conseillé si le navigateur bloque le .exe</span></a>
+    <a class="card dl" href="logiciel/SimreseauServeur.exe" download><b>SimRéseau Serveur — fichier .exe direct</b><span>SimreseauServeur.exe · 12 Mo · Windows 10/11 64 bits · sans installation</span></a>
     <a class="card dl" href="logiciel/SimreseauV4.exe" download><b>SimRéseau V4 — version sans les services (Windows)</b><span>SimreseauV4.exe · 8 Mo · Windows 10/11 64 bits · sans installation · version précédente</span></a>
     <a class="card dl" href="logiciel/bastion-windows.zip" download><b>Bastion — pare-feu personnel (Windows)</b><span>bastion-windows.zip · 0,1 Mo · Python 3 requis · lanceur lancer_windows.bat · droits administrateur</span></a>
     <a class="card dl" href="logiciel/bastion-linux.zip" download><b>Bastion — pare-feu personnel (Linux)</b><span>bastion-linux.zip · 0,1 Mo · Python 3 + nftables · lanceur lancer_linux.sh · sudo</span></a>
@@ -84,6 +85,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace}
     <li>Si Windows affiche « Windows a protégé votre ordinateur » : « Informations complémentaires » puis « Exécuter quand même » (le programme n’est pas signé).</li>
     <li>Menu Fichier › Exemples pour démarrer, ou Fichier › Ouvrir pour reprendre un réseau <code>.xml</code> de l’ancien simulateur CERTA.</li>
   </ol>
+  <p class="note">Le programme n'est pas signé numériquement : Chrome ou Windows Defender peuvent le signaler à tort comme dangereux (faux positif fréquent avec les petits logiciels non signés). Préférez le .zip ; si Chrome bloque quand même, ouvrez chrome://downloads puis « Conserver le fichier dangereux ». Le programme ne fait aucune connexion réseau réelle : tout est simulé.</p>
   <p class="note">Sur GitHub, le fichier se télécharge aussi depuis le dossier <code>espace-claude/logiciel/</code> (bouton « Download raw file »).</p>
   <h2>Bastion</h2>
   <p>Pare-feu personnel à interface web, inspiré de Look 'n' Stop : règles ordonnées (sens, TCP/UDP/ICMP, IP, ports, adresse MAC), filtrage par application sous Windows et par compte sous Linux, bibliothèque de règles, zones de confiance, journal, profils, mot de passe, et un menu Aide avec des exemples de ports ouverts ou fermés et d’applications autorisées ou bloquées. Il pilote le pare-feu du système (Pare-feu Windows ou nftables) avec confirmation et retour arrière automatique. Code source : <a href="https://github.com/bnvel2/raspberrypi/tree/main/espace-claude/logiciel/bastion-pare-feu">dossier bastion-pare-feu</a>.</p>
